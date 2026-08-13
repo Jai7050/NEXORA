@@ -1,0 +1,169 @@
+.dashboard-page {
+  min-height: 100vh;
+  padding: 40px;
+  background: #080b14;
+  color: #ffffff;
+}
+
+.dashboard-header {
+  max-width: 1100px;
+  margin: 0 auto 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.welcome-text {
+  margin: 0 0 8px;
+  color: #9ca3af;
+}
+
+.dashboard-header h1 {
+  margin: 0;
+  font-size: 42px;
+  letter-spacing: 3px;
+}
+
+.level-text {
+  margin-top: 8px;
+  color: #8b5cf6;
+}
+
+.xp-box {
+  padding: 18px 24px;
+  border: 1px solid #252a3a;
+  border-radius: 12px;
+  background: #111522;
+  text-align: center;
+}
+
+.xp-box span,
+.xp-box strong {
+  display: block;
+}
+
+.xp-box span {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.xp-box strong {
+  margin-top: 6px;
+  font-size: 20px;
+}
+
+.progress-card,
+.mission-card,
+.stat-card {
+  border: 1px solid #252a3a;
+  background: #111522;
+  border-radius: 14px;
+}
+
+.progress-card {
+  max-width: 1100px;
+  margin: 0 auto 35px;
+  padding: 24px;
+}
+
+.card-title {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 15px;
+}
+
+.card-title strong {
+  color: #8b5cf6;
+}
+
+.progress-bar {
+  height: 10px;
+  background: #252a3a;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  width: 0%;
+  height: 100%;
+}
+
+.dashboard-section {
+  max-width: 1100px;
+  margin: 0 auto 35px;
+}
+
+.dashboard-section h2 {
+  margin-bottom: 18px;
+}
+
+.mission-card {
+  padding: 20px;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mission-card h3 {
+  margin: 0 0 6px;
+}
+
+.mission-card p {
+  margin: 0;
+  color: #9ca3af;
+}
+
+.mission-card > span {
+  color: #8b5cf6;
+  font-weight: bold;
+}
+
+.stats-grid {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.stat-card {
+  padding: 24px;
+}
+
+.stat-card span {
+  color: #9ca3af;
+}
+
+.stat-card strong {
+  display: block;
+  margin: 10px 0 5px;
+  font-size: 28px;
+}
+
+.stat-card p {
+  margin: 0;
+  color: #9ca3af;
+}
+
+@media (max-width: 700px) {
+  .dashboard-page {
+    padding: 20px;
+  }
+
+  .dashboard-header {
+    align-items: flex-start;
+  }
+
+  .dashboard-header h1 {
+    font-size: 32px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .xp-box {
+    padding: 12px;
+  }
+}

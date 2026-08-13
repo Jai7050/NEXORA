@@ -1,18 +1,15 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import { useState } from "react";
 import Login from "./pages/Login/Login";
-import Register from "./pages/Register/Register";
+import Dashboard from "./pages/Dashboard/Dashboard";
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
-    </BrowserRouter>
-  );
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  if (isLoggedIn) {
+    return <Dashboard />;
+  }
+
+  return <Login onLogin={() => setIsLoggedIn(true)} />;
 }
 
 export default App;

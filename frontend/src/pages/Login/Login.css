@@ -1,8 +1,8 @@
 .login-page {
   min-height: 100vh;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   padding: 20px;
   background: #0b1220;
   color: #ffffff;
@@ -12,65 +12,57 @@
   width: 100%;
   max-width: 420px;
   padding: 40px;
-  border: 1px solid #1e293b;
-  border-radius: 20px;
   background: #111827;
+  border: 1px solid #1e293b;
+  border-radius: 24px;
   text-align: center;
-}
-
-.login-logo {
-  font-size: 42px;
-  color: #8b5cf6;
-  margin-bottom: 10px;
 }
 
 .login-card h1 {
   margin: 0;
-  font-size: 32px;
-  letter-spacing: 4px;
+  font-size: 48px;
+  letter-spacing: 6px;
 }
 
-.login-tagline {
-  margin: 8px 0 30px;
-  color: #94a3b8;
-  font-size: 14px;
-  letter-spacing: 1px;
+.tagline {
+  margin: 5px 0 30px;
+  color: #9ca3af;
+  font-size: 18px;
 }
 
-.login-form {
-  display: flex;
-  flex-direction: column;
+.form-group {
   text-align: left;
-}
-
-.login-form label {
-  margin-bottom: 7px;
-  color: #cbd5e1;
-  font-size: 14px;
-}
-
-.login-form input {
-  width: 100%;
-  padding: 13px 14px;
   margin-bottom: 18px;
-  border: 1px solid #334155;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 14px;
+  color: #d1d5db;
+}
+
+.form-group input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 13px 14px;
+  border: 1px solid #374151;
   border-radius: 10px;
-  outline: none;
-  background: #0f172a;
+  background: #0b1220;
   color: #ffffff;
   font-size: 15px;
-  box-sizing: border-box;
+  outline: none;
 }
 
-.login-form input:focus {
+.form-group input:focus {
   border-color: #8b5cf6;
 }
 
-.login-form input::placeholder {
-  color: #64748b;
+.form-group input::placeholder {
+  color: #6b7280;
 }
 
-.login-form button {
+.login-button {
   width: 100%;
   padding: 13px;
   margin-top: 5px;
@@ -83,27 +75,34 @@
   cursor: pointer;
 }
 
-.login-form button:hover {
+.login-button:hover {
   background: #7c3aed;
 }
 
 .register-text {
   margin-top: 25px;
-  color: #94a3b8;
-  font-size: 14px;
+  color: #9ca3af;
 }
 
-.register-text span {
+.register-button {
+  margin-left: 6px;
+  border: none;
+  background: transparent;
   color: #a78bfa;
+  font-size: 15px;
   cursor: pointer;
-  font-weight: 600;
-}
-.register-text a {
-  color: #a78bfa;
-  text-decoration: none;
-  font-weight: 600;
 }
 
-.register-text a:hover {
+.register-button:hover {
   text-decoration: underline;
+}
+
+@media (max-width: 500px) {
+  .login-card {
+    padding: 30px 20px;
+  }
+
+  .login-card h1 {
+    font-size: 38px;
+  }
 }
