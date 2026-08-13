@@ -1,0 +1,32 @@
+.splash {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b1220;
+  color: #ffffff;
+}
+
+.splash-content {
+  text-align: center;
+}
+
+.splash-symbol {
+  font-size: 52px;
+  color: #8b5cf6;
+  margin-bottom: 16px;
+}
+
+.splash-content h1 {
+  margin: 0;
+  font-size: 52px;
+  font-weight: 700;
+  letter-spacing: 6px;
+}
+
+.splash-content p {
+  margin-top: 12px;
+  color: #94a3b8;
+  font-size: 16px;
+  letter-spacing: 2px;
+}
