@@ -167,3 +167,312 @@
     padding: 12px;
   }
 }
+.mission-card {
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.mission-card:hover {
+  border-color: #8b5cf6;
+}
+
+.mission-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.mission-check {
+  width: 22px;
+  height: 22px;
+  border: 2px solid #475569;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mission-check.checked {
+  background: #8b5cf6;
+  border-color: #8b5cf6;
+}
+
+.mission-card.completed h3 {
+  text-decoration: line-through;
+  color: #64748b;
+}
+
+.mission-card.completed {
+  opacity: 0.8;
+}
+/* ================================
+   NEXORA GAMIFIED UI
+================================ */
+
+.dashboard-page {
+  position: relative;
+}
+
+/* XP BOX */
+
+.xp-box {
+  border: 1px solid rgba(139, 92, 246, 0.4);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.08);
+  transition: 0.2s ease;
+}
+
+.xp-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.2);
+}
+
+/* MISSION CARDS */
+
+.mission-card {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.mission-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 3px;
+  height: 100%;
+  background: #8b5cf6;
+  transform: scaleY(0);
+  transition: 0.2s ease;
+}
+
+.mission-card:hover {
+  transform: translateX(4px);
+  border-color: #8b5cf6;
+  box-shadow: 0 5px 25px rgba(139, 92, 246, 0.12);
+}
+
+.mission-card:hover::before {
+  transform: scaleY(1);
+}
+
+/* COMPLETED MISSION */
+
+.mission-card.completed {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.mission-card.completed::before {
+  background: #22c55e;
+  transform: scaleY(1);
+}
+
+/* XP TEXT */
+
+.mission-card > span {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* BONUS CARDS */
+
+.bonus-card {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.bonus-card:hover {
+  transform: translateX(4px);
+  border-color: #8b5cf6;
+  box-shadow: 0 5px 25px rgba(139, 92, 246, 0.12);
+}
+
+/* PROGRESS BAR */
+
+.progress-bar {
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-fill {
+  transition: width 0.5s ease;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.5);
+}
+
+/* STAT CARDS */
+
+.stat-card {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+/* ================================
+   LEVEL UP OVERLAY
+================================ */
+
+.level-up-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgba(2, 6, 23, 0.82);
+  backdrop-filter: blur(8px);
+
+  animation: overlayAppear 0.25s ease;
+}
+
+.level-up-card {
+  width: min(420px, 90%);
+  padding: 40px 30px;
+
+  text-align: center;
+
+  background: #0f172a;
+  border: 1px solid #8b5cf6;
+  border-radius: 20px;
+
+  box-shadow:
+    0 0 40px rgba(139, 92, 246, 0.25),
+    inset 0 0 30px rgba(139, 92, 246, 0.04);
+
+  animation: levelCardAppear 0.4s ease;
+}
+
+.level-up-icon {
+  width: 70px;
+  height: 70px;
+
+  margin: 0 auto 15px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 32px;
+
+  border: 1px solid #8b5cf6;
+  border-radius: 50%;
+
+  box-shadow: 0 0 25px rgba(139, 92, 246, 0.4);
+
+  animation: iconPulse 1.5s infinite;
+}
+
+.system-label {
+  margin: 0 0 8px;
+
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #a78bfa;
+}
+
+.level-up-card h2 {
+  margin: 0;
+
+  font-size: 32px;
+  letter-spacing: 3px;
+}
+
+.new-level {
+  margin-top: 20px;
+
+  font-size: 14px;
+  letter-spacing: 3px;
+  color: #94a3b8;
+}
+
+.new-rank {
+  margin-top: 5px;
+
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 2px;
+
+  color: #c4b5fd;
+
+  text-shadow:
+    0 0 15px rgba(139, 92, 246, 0.6);
+}
+
+.level-message {
+  margin: 18px 0 25px;
+
+  color: #94a3b8;
+}
+
+.level-up-button {
+  padding: 12px 28px;
+
+  border: 0;
+  border-radius: 10px;
+
+  background: #8b5cf6;
+  color: white;
+
+  font-weight: 700;
+  letter-spacing: 1px;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.level-up-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(139, 92, 246, 0.45);
+}
+
+/* ================================
+   ANIMATIONS
+================================ */
+
+@keyframes overlayAppear {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes levelCardAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes iconPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+}
