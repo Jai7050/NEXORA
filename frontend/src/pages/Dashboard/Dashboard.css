@@ -476,3 +476,16 @@
     transform: scale(1.08);
   }
 }
+.streak-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.streak-card strong {
+  font-size: 24px;
+}
+
+.streak-card:hover {
+  border-color: rgba(249, 115, 22, 0.5);
+  box-shadow: 0 5px 25px rgba(249, 115, 22, 0.12);
+}

@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "./Dashboard.css";
 import BonusChallenges from "../../components/BonusChallenges/BonusChallenges";
 
 function Dashboard() {
+  // =============================
+  // DAILY MISSIONS
+  // =============================
+
   const [missions, setMissions] = useState([
     {
       id: 1,
@@ -41,6 +45,10 @@ function Dashboard() {
     },
   ]);
 
+  // =============================
+  // BONUS CHALLENGES
+  // =============================
+
   const [challenges, setChallenges] = useState([
     {
       id: 1,
@@ -65,9 +73,19 @@ function Dashboard() {
     },
   ]);
 
-  // -----------------------------
+  // =============================
+  // STREAK
+  // =============================
+
+  const [streak, setStreak] = useState(0);
+
+  // Prevent multiple streak increases
+  // during the same completion cycle
+  const streakAwarded = useRef(false);
+
+  // =============================
   // DAILY MISSION DATA
-  // -----------------------------
+  // =============================
 
   const completedMissions = missions.filter(
     (mission) => mission.completed
@@ -75,15 +93,18 @@ function Dashboard() {
 
   const missionXP = missions
     .filter((mission) => mission.completed)
-    .reduce((total, mission) => total + mission.xp, 0);
+    .reduce(
+      (total, mission) => total + mission.xp,
+      0
+    );
 
   const missionProgress = Math.round(
     (completedMissions / missions.length) * 100
   );
 
-  // -----------------------------
+  // =============================
   // BONUS CHALLENGE DATA
-  // -----------------------------
+  // =============================
 
   const completedChallenges = challenges.filter(
     (challenge) => challenge.completed
@@ -91,21 +112,24 @@ function Dashboard() {
 
   const challengeXP = challenges
     .filter((challenge) => challenge.completed)
-    .reduce((total, challenge) => total + challenge.xp, 0);
+    .reduce(
+      (total, challenge) => total + challenge.xp,
+      0
+    );
 
   const challengeProgress = Math.round(
     (completedChallenges / challenges.length) * 100
   );
 
-  // -----------------------------
+  // =============================
   // TOTAL XP
-  // -----------------------------
+  // =============================
 
   const totalXP = missionXP + challengeXP;
 
-  // -----------------------------
+  // =============================
   // LEVEL SYSTEM
-  // -----------------------------
+  // =============================
 
   const level = Math.min(
     Math.floor(totalXP / 100) + 1,
@@ -128,8 +152,16 @@ function Dashboard() {
   const rank = ranks[level - 1];
 
   const xpInCurrentLevel = totalXP % 100;
-  const [showLevelUp, setShowLevelUp] = useState(false);
-  const [previousLevel, setPreviousLevel] = useState(level);
+
+  // =============================
+  // LEVEL UP POPUP
+  // =============================
+
+  const [showLevelUp, setShowLevelUp] =
+    useState(false);
+
+  const [previousLevel, setPreviousLevel] =
+    useState(level);
 
   useEffect(() => {
     if (level > previousLevel) {
@@ -138,26 +170,46 @@ function Dashboard() {
     }
   }, [level, previousLevel]);
 
-  // -----------------------------
+  // =============================
   // MISSION HANDLER
-  // -----------------------------
+  // =============================
 
   const handleMissionComplete = (id) => {
-    setMissions((currentMissions) =>
-      currentMissions.map((mission) =>
+    setMissions((currentMissions) => {
+      return currentMissions.map((mission) =>
         mission.id === id
           ? {
               ...mission,
               completed: !mission.completed,
             }
           : mission
-      )
-    );
+      );
+    });
   };
 
-  // -----------------------------
-  // CHALLENGE HANDLER
-  // -----------------------------
+  // =============================
+  // STREAK HANDLER
+  // =============================
+
+  useEffect(() => {
+    const allMissionsCompleted =
+      completedMissions === missions.length;
+
+    if (
+      allMissionsCompleted &&
+      !streakAwarded.current
+    ) {
+      setStreak(
+        (currentStreak) => currentStreak + 1
+      );
+
+      streakAwarded.current = true;
+    }
+  }, [completedMissions, missions.length]);
+
+  // =============================
+  // BONUS CHALLENGE HANDLER
+  // =============================
 
   const handleChallengeComplete = (id) => {
     setChallenges((currentChallenges) =>
@@ -172,46 +224,62 @@ function Dashboard() {
     );
   };
 
+  // =============================
+  // UI
+  // =============================
+
   return (
     <div className="dashboard-page">
+
+      {/* =========================
+          LEVEL UP POPUP
+      ========================= */}
+
       {showLevelUp && (
-      <div className="level-up-overlay">
-        <div className="level-up-card">
+        <div className="level-up-overlay">
+          <div className="level-up-card">
 
-        <div className="level-up-icon">
-        ⚡
+            <div className="level-up-icon">
+              ⚡
+            </div>
+
+            <p className="system-label">
+              NEXORA SYSTEM
+            </p>
+
+            <h2>
+              LEVEL UP!
+            </h2>
+
+            <div className="new-level">
+              LEVEL {level}
+            </div>
+
+            <div className="new-rank">
+              {rank}
+            </div>
+
+            <p className="level-message">
+              Your progress has unlocked a new rank.
+            </p>
+
+            <button
+              className="level-up-button"
+              onClick={() =>
+                setShowLevelUp(false)
+              }
+            >
+              CONTINUE
+            </button>
+
+          </div>
         </div>
+      )}
 
-        <p className="system-label">
-          NEXORA SYSTEM
-        </p>
+      {/* =========================
+          HEADER
+      ========================= */}
 
-        <h2>LEVEL UP!</h2>
-
-        <div className="new-level">
-         LEVEL {level}
-        </div>
-
-        <div className="new-rank">
-         {rank}
-        </div>
-
-        <p className="level-message">
-         Your progress has unlocked a new rank.
-        </p>
-
-        <button
-         className="level-up-button"
-         onClick={() => setShowLevelUp(false)}
-        >
-         CONTINUE
-        </button>
-
-        </div>
-      </div>
-    )}
-
-      {/* HEADER */}
       <div className="dashboard-header">
 
         <div>
@@ -219,7 +287,9 @@ function Dashboard() {
             Welcome back, Player
           </p>
 
-          <h1>NEXORA</h1>
+          <h1>
+            NEXORA
+          </h1>
 
           <p className="level-text">
             Level {level} • {rank}
@@ -227,25 +297,35 @@ function Dashboard() {
         </div>
 
         <div className="xp-box">
-          <span>XP</span>
+
+          <span>
+            XP
+          </span>
 
           <strong>
             {xpInCurrentLevel} / 100
           </strong>
+
         </div>
 
       </div>
 
+      {/* =========================
+          DAILY PROGRESS
+      ========================= */}
 
-      {/* DAILY PROGRESS */}
       <div className="progress-card">
 
         <div className="card-title">
-          <span>Today's Mission Progress</span>
+
+          <span>
+            Today's Mission Progress
+          </span>
 
           <strong>
             {missionProgress}%
           </strong>
+
         </div>
 
         <div className="progress-bar">
@@ -261,11 +341,15 @@ function Dashboard() {
 
       </div>
 
+      {/* =========================
+          DAILY MISSIONS
+      ========================= */}
 
-      {/* DAILY MISSIONS */}
       <section className="dashboard-section">
 
-        <h2>Today's Missions</h2>
+        <h2>
+          Today's Missions
+        </h2>
 
         {missions.map((mission) => (
 
@@ -277,7 +361,9 @@ function Dashboard() {
             }`}
             key={mission.id}
             onClick={() =>
-              handleMissionComplete(mission.id)
+              handleMissionComplete(
+                mission.id
+              )
             }
           >
 
@@ -290,7 +376,9 @@ function Dashboard() {
                     : ""
                 }`}
               >
-                {mission.completed ? "✓" : ""}
+                {mission.completed
+                  ? "✓"
+                  : ""}
               </div>
 
               <div>
@@ -317,15 +405,19 @@ function Dashboard() {
 
       </section>
 
+      {/* =========================
+          BONUS CHALLENGES
+      ========================= */}
 
-      {/* BONUS CHALLENGES */}
       <BonusChallenges
         challenges={challenges}
         onComplete={handleChallengeComplete}
       />
 
+      {/* =========================
+          BONUS PROGRESS
+      ========================= */}
 
-      {/* BONUS PROGRESS */}
       <div className="progress-card">
 
         <div className="card-title">
@@ -353,9 +445,13 @@ function Dashboard() {
 
       </div>
 
+      {/* =========================
+          STATS
+      ========================= */}
 
-      {/* STATS */}
       <div className="stats-grid">
+
+        {/* TOTAL XP */}
 
         <div className="stat-card">
 
@@ -373,6 +469,7 @@ function Dashboard() {
 
         </div>
 
+        {/* MISSIONS */}
 
         <div className="stat-card">
 
@@ -381,7 +478,8 @@ function Dashboard() {
           </span>
 
           <strong>
-            {completedMissions} / {missions.length}
+            {completedMissions} /{" "}
+            {missions.length}
           </strong>
 
           <p>
@@ -390,6 +488,25 @@ function Dashboard() {
 
         </div>
 
+        {/* STREAK */}
+
+        <div className="stat-card streak-card">
+
+          <span>
+            🔥 Streak
+          </span>
+
+          <strong>
+            {streak} Days
+          </strong>
+
+          <p>
+            Keep the chain alive
+          </p>
+
+        </div>
+
+        {/* RANK */}
 
         <div className="stat-card">
 
