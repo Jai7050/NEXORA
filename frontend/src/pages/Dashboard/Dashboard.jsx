@@ -1,131 +1,254 @@
+Dashboard.jsx
 import { useEffect, useRef, useState } from "react";
 import "./Dashboard.css";
 import BonusChallenges from "../../components/BonusChallenges/BonusChallenges";
+import {
+  getTotalXP,
+  addXP,
+  removeXP,
+} from "../../utils/xpSystem";
+
+const STREAK_KEY = "nexora_streak";
+const LAST_COMPLETED_KEY = "nexora_last_completed_date";
+const BEST_STREAK_KEY = "nexora_best_streak";
+
+const MISSIONS_KEY = "nexora_missions";
+const CHALLENGES_KEY = "nexora_challenges";
+
+function getTodayDate() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function getYesterdayDate() {
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  return yesterday.toISOString().split("T")[0];
+}
+
+const defaultMissions = [
+  {
+    id: 1,
+    title: "Study for 1 hour",
+    description: "Improve your knowledge",
+    xp: 20,
+    completed: false,
+  },
+  {
+    id: 2,
+    title: "Exercise",
+    description: "Take care of your body",
+    xp: 15,
+    completed: false,
+  },
+  {
+    id: 3,
+    title: "Read 10 pages",
+    description: "Build your reading habit",
+    xp: 10,
+    completed: false,
+  },
+  {
+    id: 4,
+    title: "Drink Water",
+    description: "Stay hydrated",
+    xp: 10,
+    completed: false,
+  },
+  {
+    id: 5,
+    title: "Meditation",
+    description: "Relax your mind",
+    xp: 15,
+    completed: false,
+  },
+];
+
+const defaultChallenges = [
+  {
+    id: 1,
+    title: "Complete 20 Push-ups",
+    description: "Challenge your physical strength",
+    xp: 30,
+    completed: false,
+  },
+  {
+    id: 2,
+    title: "Study for 2 Hours",
+    description: "Deepen your knowledge",
+    xp: 40,
+    completed: false,
+  },
+  {
+    id: 3,
+    title: "Complete Morning Routine",
+    description: "Start your day with discipline",
+    xp: 25,
+    completed: false,
+  },
+];
+
+function loadData(key, defaultData) {
+  try {
+    const savedData = localStorage.getItem(key);
+
+    return savedData
+      ? JSON.parse(savedData)
+      : defaultData;
+  } catch (error) {
+    console.error(
+      `Failed to load ${key}:`,
+      error
+    );
+
+    return defaultData;
+  }
+}
 
 function Dashboard() {
   // =============================
   // DAILY MISSIONS
   // =============================
 
-  const [missions, setMissions] = useState([
-    {
-      id: 1,
-      title: "Study for 1 hour",
-      description: "Improve your knowledge",
-      xp: 20,
-      completed: false,
-    },
-    {
-      id: 2,
-      title: "Exercise",
-      description: "Take care of your body",
-      xp: 15,
-      completed: false,
-    },
-    {
-      id: 3,
-      title: "Read 10 pages",
-      description: "Build your reading habit",
-      xp: 10,
-      completed: false,
-    },
-    {
-      id: 4,
-      title: "Drink Water",
-      description: "Stay hydrated",
-      xp: 10,
-      completed: false,
-    },
-    {
-      id: 5,
-      title: "Meditation",
-      description: "Relax your mind",
-      xp: 15,
-      completed: false,
-    },
-  ]);
+  const [missions, setMissions] = useState(() =>
+    loadData(
+      MISSIONS_KEY,
+      defaultMissions
+    )
+  );
 
   // =============================
   // BONUS CHALLENGES
   // =============================
 
-  const [challenges, setChallenges] = useState([
-    {
-      id: 1,
-      title: "Complete 20 Push-ups",
-      description: "Challenge your physical strength",
-      xp: 30,
-      completed: false,
-    },
-    {
-      id: 2,
-      title: "Study for 2 Hours",
-      description: "Deepen your knowledge",
-      xp: 40,
-      completed: false,
-    },
-    {
-      id: 3,
-      title: "Complete Morning Routine",
-      description: "Start your day with discipline",
-      xp: 25,
-      completed: false,
-    },
-  ]);
+  const [challenges, setChallenges] =
+    useState(() =>
+      loadData(
+        CHALLENGES_KEY,
+        defaultChallenges
+      )
+    );
+
+  // =============================
+  // TOTAL XP
+  // =============================
+
+  const [totalXP, setTotalXP] =
+    useState(() => getTotalXP());
+
+  // =============================
+  // XP SYNC
+  // =============================
+
+  useEffect(() => {
+    const handleXPUpdate = (event) => {
+      setTotalXP(
+        Number(event.detail) || 0
+      );
+    };
+
+    window.addEventListener(
+      "nexora-xp-updated",
+      handleXPUpdate
+    );
+
+    return () => {
+      window.removeEventListener(
+        "nexora-xp-updated",
+        handleXPUpdate
+      );
+    };
+  }, []);
+
+  // =============================
+  // SYNC WHEN TAB/APP BECOMES ACTIVE
+  // =============================
+
+  useEffect(() => {
+    const syncXP = () => {
+      setTotalXP(getTotalXP());
+    };
+
+    window.addEventListener(
+      "storage",
+      syncXP
+    );
+
+    window.addEventListener(
+      "focus",
+      syncXP
+    );
+
+    return () => {
+      window.removeEventListener(
+        "storage",
+        syncXP
+      );
+
+      window.removeEventListener(
+        "focus",
+        syncXP
+      );
+    };
+  }, []);
 
   // =============================
   // STREAK
   // =============================
 
-  const [streak, setStreak] = useState(0);
+  const [streak, setStreak] = useState(() => {
+    const savedStreak =
+      localStorage.getItem(STREAK_KEY);
 
-  // Prevent multiple streak increases
-  // during the same completion cycle
+    return savedStreak
+      ? Number(savedStreak)
+      : 0;
+  });
+
+  const [bestStreak, setBestStreak] =
+    useState(() => {
+      const savedBestStreak =
+        localStorage.getItem(
+          BEST_STREAK_KEY
+        );
+
+      return savedBestStreak
+        ? Number(savedBestStreak)
+        : 0;
+    });
+
   const streakAwarded = useRef(false);
 
   // =============================
   // DAILY MISSION DATA
   // =============================
 
-  const completedMissions = missions.filter(
-    (mission) => mission.completed
-  ).length;
-
-  const missionXP = missions
-    .filter((mission) => mission.completed)
-    .reduce(
-      (total, mission) => total + mission.xp,
-      0
-    );
+  const completedMissions =
+    missions.filter(
+      (mission) => mission.completed
+    ).length;
 
   const missionProgress = Math.round(
-    (completedMissions / missions.length) * 100
+    (completedMissions /
+      missions.length) *
+      100
   );
 
   // =============================
-  // BONUS CHALLENGE DATA
+  // BONUS DATA
   // =============================
 
-  const completedChallenges = challenges.filter(
-    (challenge) => challenge.completed
-  ).length;
-
-  const challengeXP = challenges
-    .filter((challenge) => challenge.completed)
-    .reduce(
-      (total, challenge) => total + challenge.xp,
-      0
-    );
+  const completedChallenges =
+    challenges.filter(
+      (challenge) =>
+        challenge.completed
+    ).length;
 
   const challengeProgress = Math.round(
-    (completedChallenges / challenges.length) * 100
+    (completedChallenges /
+      challenges.length) *
+      100
   );
-
-  // =============================
-  // TOTAL XP
-  // =============================
-
-  const totalXP = missionXP + challengeXP;
 
   // =============================
   // LEVEL SYSTEM
@@ -151,10 +274,11 @@ function Dashboard() {
 
   const rank = ranks[level - 1];
 
-  const xpInCurrentLevel = totalXP % 100;
+  const xpInCurrentLevel =
+    totalXP % 100;
 
   // =============================
-  // LEVEL UP POPUP
+  // LEVEL UP
   // =============================
 
   const [showLevelUp, setShowLevelUp] =
@@ -171,56 +295,189 @@ function Dashboard() {
   }, [level, previousLevel]);
 
   // =============================
+  // SAVE MISSIONS
+  // =============================
+
+  useEffect(() => {
+    localStorage.setItem(
+      MISSIONS_KEY,
+      JSON.stringify(missions)
+    );
+  }, [missions]);
+
+  // =============================
+  // SAVE CHALLENGES
+  // =============================
+
+  useEffect(() => {
+    localStorage.setItem(
+      CHALLENGES_KEY,
+      JSON.stringify(challenges)
+    );
+  }, [challenges]);
+
+  // =============================
   // MISSION HANDLER
   // =============================
 
   const handleMissionComplete = (id) => {
     setMissions((currentMissions) => {
-      return currentMissions.map((mission) =>
-        mission.id === id
-          ? {
-              ...mission,
-              completed: !mission.completed,
-            }
-          : mission
+      const clickedMission =
+        currentMissions.find(
+          (mission) => mission.id === id
+        );
+
+      if (!clickedMission) {
+        return currentMissions;
+      }
+
+      const isCompleting =
+        !clickedMission.completed;
+
+      if (isCompleting) {
+        const newXP = addXP(
+          clickedMission.xp
+        );
+
+        setTotalXP(newXP);
+      } else {
+        const newXP = removeXP(
+          clickedMission.xp
+        );
+
+        setTotalXP(newXP);
+      }
+
+      return currentMissions.map(
+        (mission) =>
+          mission.id === id
+            ? {
+                ...mission,
+                completed:
+                  isCompleting,
+              }
+            : mission
       );
     });
   };
 
   // =============================
-  // STREAK HANDLER
+  // STREAK SYSTEM
   // =============================
 
   useEffect(() => {
     const allMissionsCompleted =
-      completedMissions === missions.length;
+      completedMissions ===
+      missions.length;
 
     if (
-      allMissionsCompleted &&
-      !streakAwarded.current
+      !allMissionsCompleted ||
+      streakAwarded.current
     ) {
-      setStreak(
-        (currentStreak) => currentStreak + 1
+      return;
+    }
+
+    const today = getTodayDate();
+
+    const lastCompletedDate =
+      localStorage.getItem(
+        LAST_COMPLETED_KEY
       );
 
+    if (lastCompletedDate === today) {
       streakAwarded.current = true;
+      return;
     }
-  }, [completedMissions, missions.length]);
+
+    let newStreak = streak;
+
+    if (!lastCompletedDate) {
+      newStreak = 1;
+    } else if (
+      lastCompletedDate ===
+      getYesterdayDate()
+    ) {
+      newStreak = streak + 1;
+    } else {
+      newStreak = 1;
+    }
+
+    const newBestStreak = Math.max(
+      bestStreak,
+      newStreak
+    );
+
+    setStreak(newStreak);
+    setBestStreak(newBestStreak);
+
+    localStorage.setItem(
+      STREAK_KEY,
+      String(newStreak)
+    );
+
+    localStorage.setItem(
+      BEST_STREAK_KEY,
+      String(newBestStreak)
+    );
+
+    localStorage.setItem(
+      LAST_COMPLETED_KEY,
+      today
+    );
+
+    streakAwarded.current = true;
+  }, [
+    completedMissions,
+    missions.length,
+    streak,
+    bestStreak,
+  ]);
 
   // =============================
-  // BONUS CHALLENGE HANDLER
+  // BONUS HANDLER
   // =============================
 
   const handleChallengeComplete = (id) => {
-    setChallenges((currentChallenges) =>
-      currentChallenges.map((challenge) =>
-        challenge.id === id
-          ? {
-              ...challenge,
-              completed: !challenge.completed,
-            }
-          : challenge
-      )
+    setChallenges(
+      (currentChallenges) => {
+        const clickedChallenge =
+          currentChallenges.find(
+            (challenge) =>
+              challenge.id === id
+          );
+
+        if (!clickedChallenge) {
+          return currentChallenges;
+        }
+
+        const isCompleting =
+          !clickedChallenge.completed;
+
+        if (isCompleting) {
+          const newXP = addXP(
+            clickedChallenge.xp
+          );
+
+          setTotalXP(newXP);
+        } else {
+          const newXP = removeXP(
+            clickedChallenge.xp
+          );
+
+          setTotalXP(newXP);
+        }
+
+        return currentChallenges.map(
+          (challenge) =>
+            challenge.id === id
+              ? {
+                  ...challenge,
+                  completed:
+                    isCompleting,
+                }
+              : challenge
+        );
+      }
     );
   };
 
@@ -231,12 +488,11 @@ function Dashboard() {
   return (
     <div className="dashboard-page">
 
-      {/* =========================
-          LEVEL UP POPUP
-      ========================= */}
+      {/* LEVEL UP POPUP */}
 
       {showLevelUp && (
         <div className="level-up-overlay">
+
           <div className="level-up-card">
 
             <div className="level-up-icon">
@@ -260,7 +516,8 @@ function Dashboard() {
             </div>
 
             <p className="level-message">
-              Your progress has unlocked a new rank.
+              Your progress has unlocked
+              a new rank.
             </p>
 
             <button
@@ -273,16 +530,16 @@ function Dashboard() {
             </button>
 
           </div>
+
         </div>
       )}
 
-      {/* =========================
-          HEADER
-      ========================= */}
+      {/* HEADER */}
 
       <div className="dashboard-header">
 
         <div>
+
           <p className="welcome-text">
             Welcome back, Player
           </p>
@@ -294,6 +551,7 @@ function Dashboard() {
           <p className="level-text">
             Level {level} • {rank}
           </p>
+
         </div>
 
         <div className="xp-box">
@@ -310,9 +568,7 @@ function Dashboard() {
 
       </div>
 
-      {/* =========================
-          DAILY PROGRESS
-      ========================= */}
+      {/* DAILY PROGRESS */}
 
       <div className="progress-card">
 
@@ -335,15 +591,13 @@ function Dashboard() {
             style={{
               width: `${missionProgress}%`,
             }}
-          ></div>
+          />
 
         </div>
 
       </div>
 
-      {/* =========================
-          DAILY MISSIONS
-      ========================= */}
+      {/* DAILY MISSIONS */}
 
       <section className="dashboard-section">
 
@@ -405,18 +659,16 @@ function Dashboard() {
 
       </section>
 
-      {/* =========================
-          BONUS CHALLENGES
-      ========================= */}
+      {/* BONUS CHALLENGES */}
 
       <BonusChallenges
         challenges={challenges}
-        onComplete={handleChallengeComplete}
+        onComplete={
+          handleChallengeComplete
+        }
       />
 
-      {/* =========================
-          BONUS PROGRESS
-      ========================= */}
+      {/* BONUS PROGRESS */}
 
       <div className="progress-card">
 
@@ -439,15 +691,13 @@ function Dashboard() {
             style={{
               width: `${challengeProgress}%`,
             }}
-          ></div>
+          />
 
         </div>
 
       </div>
 
-      {/* =========================
-          STATS
-      ========================= */}
+      {/* STATS */}
 
       <div className="stats-grid">
 
@@ -501,7 +751,7 @@ function Dashboard() {
           </strong>
 
           <p>
-            Keep the chain alive
+            Best: {bestStreak} Days
           </p>
 
         </div>
