@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./Dashboard.css";
 import BonusChallenges from "../../components/BonusChallenges/BonusChallenges";
+import Navbar from "../../components/Navbar";
 import {
   getTotalXP,
   addXP,
@@ -91,7 +92,9 @@ function loadData(key, defaultData) {
   try {
     const savedData = localStorage.getItem(key);
 
-    return savedData ? JSON.parse(savedData) : defaultData;
+    return savedData
+      ? JSON.parse(savedData)
+      : defaultData;
   } catch (error) {
     console.error(`Failed to load ${key}:`, error);
 
@@ -131,15 +134,21 @@ function Dashboard() {
       setTotalXP(Number(event.detail) || 0);
     };
 
-    window.addEventListener("nexora-xp-updated", handleXPUpdate);
+    window.addEventListener(
+      "nexora-xp-updated",
+      handleXPUpdate
+    );
 
     return () => {
-      window.removeEventListener("nexora-xp-updated", handleXPUpdate);
+      window.removeEventListener(
+        "nexora-xp-updated",
+        handleXPUpdate
+      );
     };
   }, []);
 
   // =============================
-  // SYNC WHEN TAB/APP BECOMES ACTIVE
+  // SYNC WHEN TAB / APP BECOMES ACTIVE
   // =============================
 
   useEffect(() => {
@@ -161,15 +170,21 @@ function Dashboard() {
   // =============================
 
   const [streak, setStreak] = useState(() => {
-    const savedStreak = localStorage.getItem(STREAK_KEY);
+    const savedStreak =
+      localStorage.getItem(STREAK_KEY);
 
-    return savedStreak ? Number(savedStreak) : 0;
+    return savedStreak
+      ? Number(savedStreak)
+      : 0;
   });
 
   const [bestStreak, setBestStreak] = useState(() => {
-    const savedBestStreak = localStorage.getItem(BEST_STREAK_KEY);
+    const savedBestStreak =
+      localStorage.getItem(BEST_STREAK_KEY);
 
-    return savedBestStreak ? Number(savedBestStreak) : 0;
+    return savedBestStreak
+      ? Number(savedBestStreak)
+      : 0;
   });
 
   const streakAwarded = useRef(false);
@@ -230,7 +245,8 @@ function Dashboard() {
 
   const [showLevelUp, setShowLevelUp] = useState(false);
 
-  const [previousLevel, setPreviousLevel] = useState(level);
+  const [previousLevel, setPreviousLevel] =
+    useState(level);
 
   useEffect(() => {
     if (level > previousLevel) {
@@ -276,8 +292,9 @@ function Dashboard() {
 
     const isCompleting = !clickedMission.completed;
 
-    // XP update happens OUTSIDE the state updater.
-    // This prevents React StrictMode from awarding XP twice.
+    // IMPORTANT:
+    // XP update is outside setMissions()
+    // to prevent duplicate XP in StrictMode.
     const newXP = isCompleting
       ? addXP(clickedMission.xp)
       : removeXP(clickedMission.xp);
@@ -314,7 +331,9 @@ function Dashboard() {
     const today = getTodayDate();
 
     const lastCompletedDate =
-      localStorage.getItem(LAST_COMPLETED_KEY);
+      localStorage.getItem(
+        LAST_COMPLETED_KEY
+      );
 
     if (lastCompletedDate === today) {
       streakAwarded.current = true;
@@ -365,7 +384,7 @@ function Dashboard() {
   ]);
 
   // =============================
-  // BONUS HANDLER
+  // BONUS CHALLENGE HANDLER
   // =============================
 
   const handleChallengeComplete = (id) => {
@@ -377,10 +396,12 @@ function Dashboard() {
       return;
     }
 
-    const isCompleting = !clickedChallenge.completed;
+    const isCompleting =
+      !clickedChallenge.completed;
 
-    // XP update happens OUTSIDE the state updater.
-    // This prevents React StrictMode from awarding XP twice.
+    // IMPORTANT:
+    // XP update is outside setChallenges()
+    // to prevent duplicate XP in StrictMode.
     const newXP = isCompleting
       ? addXP(clickedChallenge.xp)
       : removeXP(clickedChallenge.xp);
@@ -404,297 +425,302 @@ function Dashboard() {
   // =============================
 
   return (
-    <div className="dashboard-page">
+    <>
+      {/* NEXORA NAVIGATION */}
+      <Navbar />
 
-      {/* LEVEL UP POPUP */}
+      <div className="dashboard-page">
 
-      {showLevelUp && (
-        <div className="level-up-overlay">
+        {/* LEVEL UP POPUP */}
 
-          <div className="level-up-card">
+        {showLevelUp && (
+          <div className="level-up-overlay">
 
-            <div className="level-up-icon">
-              ⚡
+            <div className="level-up-card">
+
+              <div className="level-up-icon">
+                ⚡
+              </div>
+
+              <p className="system-label">
+                NEXORA SYSTEM
+              </p>
+
+              <h2>
+                LEVEL UP!
+              </h2>
+
+              <div className="new-level">
+                LEVEL {level}
+              </div>
+
+              <div className="new-rank">
+                {rank}
+              </div>
+
+              <p className="level-message">
+                Your progress has unlocked
+                a new rank.
+              </p>
+
+              <button
+                className="level-up-button"
+                onClick={() =>
+                  setShowLevelUp(false)
+                }
+              >
+                CONTINUE
+              </button>
+
             </div>
 
-            <p className="system-label">
-              NEXORA SYSTEM
+          </div>
+        )}
+
+        {/* HEADER */}
+
+        <div className="dashboard-header">
+
+          <div>
+
+            <p className="welcome-text">
+              Welcome back, Player
             </p>
 
-            <h2>
-              LEVEL UP!
-            </h2>
+            <h1>
+              NEXORA
+            </h1>
 
-            <div className="new-level">
-              LEVEL {level}
-            </div>
-
-            <div className="new-rank">
-              {rank}
-            </div>
-
-            <p className="level-message">
-              Your progress has unlocked
-              a new rank.
+            <p className="level-text">
+              Level {level} • {rank}
             </p>
-
-            <button
-              className="level-up-button"
-              onClick={() =>
-                setShowLevelUp(false)
-              }
-            >
-              CONTINUE
-            </button>
 
           </div>
 
-        </div>
-      )}
-
-      {/* HEADER */}
-
-      <div className="dashboard-header">
-
-        <div>
-
-          <p className="welcome-text">
-            Welcome back, Player
-          </p>
-
-          <h1>
-            NEXORA
-          </h1>
-
-          <p className="level-text">
-            Level {level} • {rank}
-          </p>
-
-        </div>
-
-        <div className="xp-box">
-
-          <span>
-            XP
-          </span>
-
-          <strong>
-            {xpInCurrentLevel} / 100
-          </strong>
-
-        </div>
-
-      </div>
-
-      {/* DAILY PROGRESS */}
-
-      <div className="progress-card">
-
-        <div className="card-title">
-
-          <span>
-            Today's Mission Progress
-          </span>
-
-          <strong>
-            {missionProgress}%
-          </strong>
-
-        </div>
-
-        <div className="progress-bar">
-
-          <div
-            className="progress-fill"
-            style={{
-              width: `${missionProgress}%`,
-            }}
-          />
-
-        </div>
-
-      </div>
-
-      {/* DAILY MISSIONS */}
-
-      <section className="dashboard-section">
-
-        <h2>
-          Today's Missions
-        </h2>
-
-        {missions.map((mission) => (
-
-          <div
-            className={`mission-card ${
-              mission.completed
-                ? "completed"
-                : ""
-            }`}
-            key={mission.id}
-            onClick={() =>
-              handleMissionComplete(
-                mission.id
-              )
-            }
-          >
-
-            <div className="mission-left">
-
-              <div
-                className={`mission-check ${
-                  mission.completed
-                    ? "checked"
-                    : ""
-                }`}
-              >
-                {mission.completed
-                  ? "✓"
-                  : ""}
-              </div>
-
-              <div>
-
-                <h3>
-                  {mission.title}
-                </h3>
-
-                <p>
-                  {mission.description}
-                </p>
-
-              </div>
-
-            </div>
+          <div className="xp-box">
 
             <span>
-              +{mission.xp} XP
+              XP
             </span>
+
+            <strong>
+              {xpInCurrentLevel} / 100
+            </strong>
 
           </div>
 
-        ))}
+        </div>
 
-      </section>
+        {/* DAILY PROGRESS */}
 
-      {/* BONUS CHALLENGES */}
+        <div className="progress-card">
 
-      <BonusChallenges
-        challenges={challenges}
-        onComplete={
-          handleChallengeComplete
-        }
-      />
+          <div className="card-title">
 
-      {/* BONUS PROGRESS */}
+            <span>
+              Today's Mission Progress
+            </span>
 
-      <div className="progress-card">
+            <strong>
+              {missionProgress}%
+            </strong>
 
-        <div className="card-title">
+          </div>
 
-          <span>
-            Bonus Challenge Progress
-          </span>
+          <div className="progress-bar">
 
-          <strong>
-            {challengeProgress}%
-          </strong>
+            <div
+              className="progress-fill"
+              style={{
+                width: `${missionProgress}%`,
+              }}
+            />
+
+          </div>
 
         </div>
 
-        <div className="progress-bar">
+        {/* DAILY MISSIONS */}
 
-          <div
-            className="progress-fill"
-            style={{
-              width: `${challengeProgress}%`,
-            }}
-          />
+        <section className="dashboard-section">
+
+          <h2>
+            Today's Missions
+          </h2>
+
+          {missions.map((mission) => (
+
+            <div
+              className={`mission-card ${
+                mission.completed
+                  ? "completed"
+                  : ""
+              }`}
+              key={mission.id}
+              onClick={() =>
+                handleMissionComplete(
+                  mission.id
+                )
+              }
+            >
+
+              <div className="mission-left">
+
+                <div
+                  className={`mission-check ${
+                    mission.completed
+                      ? "checked"
+                      : ""
+                  }`}
+                >
+                  {mission.completed
+                    ? "✓"
+                    : ""}
+                </div>
+
+                <div>
+
+                  <h3>
+                    {mission.title}
+                  </h3>
+
+                  <p>
+                    {mission.description}
+                  </p>
+
+                </div>
+
+              </div>
+
+              <span>
+                +{mission.xp} XP
+              </span>
+
+            </div>
+
+          ))}
+
+        </section>
+
+        {/* BONUS CHALLENGES */}
+
+        <BonusChallenges
+          challenges={challenges}
+          onComplete={
+            handleChallengeComplete
+          }
+        />
+
+        {/* BONUS PROGRESS */}
+
+        <div className="progress-card">
+
+          <div className="card-title">
+
+            <span>
+              Bonus Challenge Progress
+            </span>
+
+            <strong>
+              {challengeProgress}%
+            </strong>
+
+          </div>
+
+          <div className="progress-bar">
+
+            <div
+              className="progress-fill"
+              style={{
+                width: `${challengeProgress}%`,
+              }}
+            />
+
+          </div>
+
+        </div>
+
+        {/* STATS */}
+
+        <div className="stats-grid">
+
+          {/* TOTAL XP */}
+
+          <div className="stat-card">
+
+            <span>
+              Total XP
+            </span>
+
+            <strong>
+              {totalXP}
+            </strong>
+
+            <p>
+              Earned XP
+            </p>
+
+          </div>
+
+          {/* MISSIONS */}
+
+          <div className="stat-card">
+
+            <span>
+              Missions
+            </span>
+
+            <strong>
+              {completedMissions} /{" "}
+              {missions.length}
+            </strong>
+
+            <p>
+              Completed Today
+            </p>
+
+          </div>
+
+          {/* STREAK */}
+
+          <div className="stat-card streak-card">
+
+            <span>
+              🔥 Streak
+            </span>
+
+            <strong>
+              {streak} Days
+            </strong>
+
+            <p>
+              Best: {bestStreak} Days
+            </p>
+
+          </div>
+
+          {/* RANK */}
+
+          <div className="stat-card">
+
+            <span>
+              Rank
+            </span>
+
+            <strong>
+              {rank}
+            </strong>
+
+            <p>
+              Level {level}
+            </p>
+
+          </div>
 
         </div>
 
       </div>
-
-      {/* STATS */}
-
-      <div className="stats-grid">
-
-        {/* TOTAL XP */}
-
-        <div className="stat-card">
-
-          <span>
-            Total XP
-          </span>
-
-          <strong>
-            {totalXP}
-          </strong>
-
-          <p>
-            Earned XP
-          </p>
-
-        </div>
-
-        {/* MISSIONS */}
-
-        <div className="stat-card">
-
-          <span>
-            Missions
-          </span>
-
-          <strong>
-            {completedMissions} /{" "}
-            {missions.length}
-          </strong>
-
-          <p>
-            Completed Today
-          </p>
-
-        </div>
-
-        {/* STREAK */}
-
-        <div className="stat-card streak-card">
-
-          <span>
-            🔥 Streak
-          </span>
-
-          <strong>
-            {streak} Days
-          </strong>
-
-          <p>
-            Best: {bestStreak} Days
-          </p>
-
-        </div>
-
-        {/* RANK */}
-
-        <div className="stat-card">
-
-          <span>
-            Rank
-          </span>
-
-          <strong>
-            {rank}
-          </strong>
-
-          <p>
-            Level {level}
-          </p>
-
-        </div>
-
-      </div>
-
-    </div>
+    </>
   );
 }
 

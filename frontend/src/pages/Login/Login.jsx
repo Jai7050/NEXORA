@@ -1,30 +1,33 @@
 import "./Login.css";
 
-function Login({ onLogin }) {
-  const handleSubmit = (e) => {
-    e.preventDefault();
+function Login({ onLogin, onRegister }) {
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
     onLogin();
   };
 
   return (
     <div className="login-page">
+
       <div className="login-card">
+
+        <div className="login-logo">
+          N
+        </div>
 
         <h1>NEXORA</h1>
 
-        <p className="tagline">
+        <p className="login-subtitle">
           Level Up Your Life
         </p>
 
         <form onSubmit={handleSubmit}>
 
           <div className="form-group">
-            <label htmlFor="email">
-              Email
-            </label>
+            <label>Email</label>
 
             <input
-              id="email"
               type="email"
               placeholder="Enter your email"
               required
@@ -32,12 +35,9 @@ function Login({ onLogin }) {
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">
-              Password
-            </label>
+            <label>Password</label>
 
             <input
-              id="password"
               type="password"
               placeholder="Enter your password"
               required
@@ -48,23 +48,28 @@ function Login({ onLogin }) {
             type="submit"
             className="login-button"
           >
-            Login
+            LOGIN
           </button>
 
         </form>
 
         <p className="register-text">
           Don't have an account?
+          {" "}
 
           <button
-            type="button"
-            className="register-button"
-          >
-            Register
+             type="button"
+              className="register-link"
+              onClick={() => {
+              window.location.href = "/register";
+            }}
+            >
+               Register
           </button>
         </p>
 
       </div>
+
     </div>
   );
 }

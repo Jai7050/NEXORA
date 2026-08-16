@@ -1,108 +1,310 @@
+/* ================================
+   NEXORA REGISTER PAGE
+================================ */
+
 .register-page {
   min-height: 100vh;
+  width: 100%;
+
   display: flex;
-  align-items: center;
   justify-content: center;
-  padding: 20px;
-  background: #0b1220;
+  align-items: center;
+
+  box-sizing: border-box;
+
+  padding: 24px;
+
+  background:
+    radial-gradient(
+      circle at top,
+      rgba(139, 92, 246, 0.12),
+      transparent 35%
+    ),
+    #080f1d;
+
   color: #ffffff;
 }
+
+/* ================================
+   REGISTER CARD
+================================ */
 
 .register-card {
   width: 100%;
-  max-width: 420px;
-  padding: 40px;
-  border: 1px solid #1e293b;
-  border-radius: 20px;
-  background: #111827;
+  max-width: 430px;
+
+  box-sizing: border-box;
+
+  padding: 38px 40px;
+
+  background: rgba(17, 24, 39, 0.96);
+
+  border: 1px solid #273449;
+  border-radius: 22px;
+
   text-align: center;
+
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.35),
+    0 0 35px rgba(139, 92, 246, 0.08);
 }
 
+/* ================================
+   LOGO
+================================ */
+
 .register-logo {
-  font-size: 42px;
+  margin-bottom: 8px;
+
+  font-size: 52px;
+  line-height: 1;
+
+  font-weight: 500;
+
   color: #8b5cf6;
-  margin-bottom: 10px;
+
+  text-shadow:
+    0 0 18px rgba(139, 92, 246, 0.35);
 }
+
+/* ================================
+   TITLE
+================================ */
 
 .register-card h1 {
   margin: 0;
-  font-size: 32px;
-  letter-spacing: 4px;
-}
 
-.register-tagline {
-  margin: 8px 0 30px;
-  color: #94a3b8;
-  font-size: 14px;
-}
+  font-size: 34px;
+  line-height: 1.15;
 
-.register-form {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
+  font-weight: 700;
 
-.register-form label {
-  margin-bottom: 7px;
-  color: #cbd5e1;
-  font-size: 14px;
-}
+  letter-spacing: 5px;
 
-.register-form input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 13px 14px;
-  margin-bottom: 18px;
-  border: 1px solid #334155;
-  border-radius: 10px;
-  outline: none;
-  background: #0f172a;
   color: #ffffff;
+}
+
+/* ================================
+   SUBTITLE
+================================ */
+
+.register-subtitle {
+  margin: 10px 0 26px;
+
+  color: #94a3b8;
+
   font-size: 15px;
+  line-height: 1.5;
+
+  letter-spacing: 0.2px;
 }
 
-.register-form input:focus {
+/* ================================
+   FORM
+================================ */
+
+.register-card form {
+  width: 100%;
+}
+
+/* ================================
+   FORM GROUP
+================================ */
+
+.register-card .form-group {
+  width: 100%;
+
+  text-align: left;
+
+  margin-bottom: 17px;
+}
+
+.register-card .form-group label {
+  display: block;
+
+  margin-bottom: 8px;
+
+  color: #dbe3ef;
+
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ================================
+   INPUT
+================================ */
+
+.register-card .form-group input {
+  width: 100%;
+  height: 50px;
+
+  box-sizing: border-box;
+
+  padding: 0 15px;
+
+  border: 1px solid #334155;
+  border-radius: 11px;
+
+  outline: none;
+
+  background: #0b1220;
+
+  color: #ffffff;
+
+  font-size: 15px;
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.register-card .form-group input:hover {
+  border-color: #475569;
+}
+
+.register-card .form-group input:focus {
   border-color: #8b5cf6;
+
+  background: #0c1425;
+
+  box-shadow:
+    0 0 0 3px rgba(139, 92, 246, 0.12);
 }
 
-.register-form input::placeholder {
+.register-card .form-group input::placeholder {
   color: #64748b;
 }
 
-.register-form button {
+/* ================================
+   REGISTER BUTTON
+================================ */
+
+.register-button {
   width: 100%;
-  padding: 13px;
-  margin-top: 5px;
+  height: 50px;
+
+  margin-top: 4px;
+
   border: none;
-  border-radius: 10px;
+  border-radius: 11px;
+
   background: #8b5cf6;
+
   color: #ffffff;
-  font-size: 16px;
-  font-weight: 600;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  letter-spacing: 1px;
+
   cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-.register-form button:hover {
+.register-button:hover {
   background: #7c3aed;
+
+  box-shadow:
+    0 8px 25px rgba(124, 58, 237, 0.25);
+
+  transform: translateY(-1px);
 }
+
+.register-button:active {
+  transform: translateY(0);
+}
+
+/* ================================
+   LOGIN TEXT
+================================ */
 
 .login-text {
-  margin-top: 25px;
+  margin: 22px 0 0;
+
   color: #94a3b8;
+
   font-size: 14px;
 }
 
-.login-text span {
+/* ================================
+   LOGIN LINK
+================================ */
+
+.login-link {
+  margin-left: 5px;
+
+  padding: 0;
+
+  border: none;
+
+  background: transparent;
+
   color: #a78bfa;
+
+  font-size: 14px;
+  font-weight: 600;
+
   cursor: pointer;
-  font-weight: 600;
-}
-.login-text a {
-  color: #a78bfa;
-  text-decoration: none;
-  font-weight: 600;
+
+  transition: color 0.2s ease;
 }
 
-.login-text a:hover {
+.login-link:hover {
+  color: #c4b5fd;
+
   text-decoration: underline;
+}
+
+/* ================================
+   MOBILE
+================================ */
+
+@media (max-width: 600px) {
+  .register-page {
+    padding: 16px;
+  }
+
+  .register-card {
+    max-width: 100%;
+
+    padding: 32px 24px;
+
+    border-radius: 18px;
+  }
+
+  .register-logo {
+    font-size: 46px;
+  }
+
+  .register-card h1 {
+    font-size: 30px;
+
+    letter-spacing: 4px;
+  }
+
+  .register-subtitle {
+    margin-bottom: 24px;
+  }
+}
+
+@media (max-width: 380px) {
+  .register-card {
+    padding: 26px 18px;
+  }
+
+  .register-card h1 {
+    font-size: 27px;
+
+    letter-spacing: 3px;
+  }
+
+  .register-card .form-group input,
+  .register-button {
+    height: 48px;
+  }
 }

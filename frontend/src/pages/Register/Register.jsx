@@ -1,64 +1,96 @@
-import { Link } from "react-router-dom";
 import "./Register.css";
 
-function Register() {
+function Register({ onLogin }) {
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
+    // Registration logic will be connected
+    // to the backend later.
+    onLogin();
+  };
+
   return (
-    <main className="register-page">
+    <div className="register-page">
+
       <div className="register-card">
 
         <div className="register-logo">
-          ✦
+          N
         </div>
 
-        <h1>NEXORA</h1>
+        <h1>CREATE ACCOUNT</h1>
 
-        <p className="register-tagline">
-          Create Your Account
+        <p className="register-subtitle">
+          Start your journey with NEXORA
         </p>
 
-        <div className="register-form">
+        <form onSubmit={handleSubmit}>
 
-          <label htmlFor="name">Full Name</label>
-          <input
-            id="name"
-            type="text"
-            placeholder="Enter your name"
-          />
+          <div className="form-group">
+            <label>Full Name</label>
 
-          <label htmlFor="email">Email</label>
-          <input
-            id="email"
-            type="email"
-            placeholder="Enter your email"
-          />
+            <input
+              type="text"
+              placeholder="Enter your name"
+              required
+            />
+          </div>
 
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            placeholder="Create a password"
-          />
+          <div className="form-group">
+            <label>Email</label>
 
-          <label htmlFor="confirmPassword">Confirm Password</label>
-          <input
-            id="confirmPassword"
-            type="password"
-            placeholder="Confirm your password"
-          />
+            <input
+              type="email"
+              placeholder="Enter your email"
+              required
+            />
+          </div>
 
-          <button type="button">
-            Create Account
+          <div className="form-group">
+            <label>Password</label>
+
+            <input
+              type="password"
+              placeholder="Create a password"
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Confirm Password</label>
+
+            <input
+              type="password"
+              placeholder="Confirm your password"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="register-button"
+          >
+            REGISTER
           </button>
 
-        </div>
+        </form>
 
         <p className="login-text">
-          Already have an account?{" "}
-          <Link to="/login">Login</Link>
+          Already have an account?
+          {" "}
+
+          <button
+            type="button"
+            className="login-link"
+            onClick={onLogin}
+          >
+            Back to Login
+          </button>
         </p>
 
       </div>
-    </main>
+
+    </div>
   );
 }
 
