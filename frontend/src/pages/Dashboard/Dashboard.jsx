@@ -1,4 +1,3 @@
-Dashboard.jsx
 import { useEffect, useRef, useState } from "react";
 import "./Dashboard.css";
 import BonusChallenges from "../../components/BonusChallenges/BonusChallenges";
@@ -92,14 +91,9 @@ function loadData(key, defaultData) {
   try {
     const savedData = localStorage.getItem(key);
 
-    return savedData
-      ? JSON.parse(savedData)
-      : defaultData;
+    return savedData ? JSON.parse(savedData) : defaultData;
   } catch (error) {
-    console.error(
-      `Failed to load ${key}:`,
-      error
-    );
+    console.error(`Failed to load ${key}:`, error);
 
     return defaultData;
   }
@@ -111,30 +105,22 @@ function Dashboard() {
   // =============================
 
   const [missions, setMissions] = useState(() =>
-    loadData(
-      MISSIONS_KEY,
-      defaultMissions
-    )
+    loadData(MISSIONS_KEY, defaultMissions)
   );
 
   // =============================
   // BONUS CHALLENGES
   // =============================
 
-  const [challenges, setChallenges] =
-    useState(() =>
-      loadData(
-        CHALLENGES_KEY,
-        defaultChallenges
-      )
-    );
+  const [challenges, setChallenges] = useState(() =>
+    loadData(CHALLENGES_KEY, defaultChallenges)
+  );
 
   // =============================
   // TOTAL XP
   // =============================
 
-  const [totalXP, setTotalXP] =
-    useState(() => getTotalXP());
+  const [totalXP, setTotalXP] = useState(() => getTotalXP());
 
   // =============================
   // XP SYNC
@@ -142,21 +128,13 @@ function Dashboard() {
 
   useEffect(() => {
     const handleXPUpdate = (event) => {
-      setTotalXP(
-        Number(event.detail) || 0
-      );
+      setTotalXP(Number(event.detail) || 0);
     };
 
-    window.addEventListener(
-      "nexora-xp-updated",
-      handleXPUpdate
-    );
+    window.addEventListener("nexora-xp-updated", handleXPUpdate);
 
     return () => {
-      window.removeEventListener(
-        "nexora-xp-updated",
-        handleXPUpdate
-      );
+      window.removeEventListener("nexora-xp-updated", handleXPUpdate);
     };
   }, []);
 
@@ -169,26 +147,12 @@ function Dashboard() {
       setTotalXP(getTotalXP());
     };
 
-    window.addEventListener(
-      "storage",
-      syncXP
-    );
-
-    window.addEventListener(
-      "focus",
-      syncXP
-    );
+    window.addEventListener("storage", syncXP);
+    window.addEventListener("focus", syncXP);
 
     return () => {
-      window.removeEventListener(
-        "storage",
-        syncXP
-      );
-
-      window.removeEventListener(
-        "focus",
-        syncXP
-      );
+      window.removeEventListener("storage", syncXP);
+      window.removeEventListener("focus", syncXP);
     };
   }, []);
 
@@ -197,25 +161,16 @@ function Dashboard() {
   // =============================
 
   const [streak, setStreak] = useState(() => {
-    const savedStreak =
-      localStorage.getItem(STREAK_KEY);
+    const savedStreak = localStorage.getItem(STREAK_KEY);
 
-    return savedStreak
-      ? Number(savedStreak)
-      : 0;
+    return savedStreak ? Number(savedStreak) : 0;
   });
 
-  const [bestStreak, setBestStreak] =
-    useState(() => {
-      const savedBestStreak =
-        localStorage.getItem(
-          BEST_STREAK_KEY
-        );
+  const [bestStreak, setBestStreak] = useState(() => {
+    const savedBestStreak = localStorage.getItem(BEST_STREAK_KEY);
 
-      return savedBestStreak
-        ? Number(savedBestStreak)
-        : 0;
-    });
+    return savedBestStreak ? Number(savedBestStreak) : 0;
+  });
 
   const streakAwarded = useRef(false);
 
@@ -223,31 +178,24 @@ function Dashboard() {
   // DAILY MISSION DATA
   // =============================
 
-  const completedMissions =
-    missions.filter(
-      (mission) => mission.completed
-    ).length;
+  const completedMissions = missions.filter(
+    (mission) => mission.completed
+  ).length;
 
   const missionProgress = Math.round(
-    (completedMissions /
-      missions.length) *
-      100
+    (completedMissions / missions.length) * 100
   );
 
   // =============================
   // BONUS DATA
   // =============================
 
-  const completedChallenges =
-    challenges.filter(
-      (challenge) =>
-        challenge.completed
-    ).length;
+  const completedChallenges = challenges.filter(
+    (challenge) => challenge.completed
+  ).length;
 
   const challengeProgress = Math.round(
-    (completedChallenges /
-      challenges.length) *
-      100
+    (completedChallenges / challenges.length) * 100
   );
 
   // =============================
@@ -274,18 +222,15 @@ function Dashboard() {
 
   const rank = ranks[level - 1];
 
-  const xpInCurrentLevel =
-    totalXP % 100;
+  const xpInCurrentLevel = totalXP % 100;
 
   // =============================
   // LEVEL UP
   // =============================
 
-  const [showLevelUp, setShowLevelUp] =
-    useState(false);
+  const [showLevelUp, setShowLevelUp] = useState(false);
 
-  const [previousLevel, setPreviousLevel] =
-    useState(level);
+  const [previousLevel, setPreviousLevel] = useState(level);
 
   useEffect(() => {
     if (level > previousLevel) {
@@ -321,44 +266,34 @@ function Dashboard() {
   // =============================
 
   const handleMissionComplete = (id) => {
-    setMissions((currentMissions) => {
-      const clickedMission =
-        currentMissions.find(
-          (mission) => mission.id === id
-        );
+    const clickedMission = missions.find(
+      (mission) => mission.id === id
+    );
 
-      if (!clickedMission) {
-        return currentMissions;
-      }
+    if (!clickedMission) {
+      return;
+    }
 
-      const isCompleting =
-        !clickedMission.completed;
+    const isCompleting = !clickedMission.completed;
 
-      if (isCompleting) {
-        const newXP = addXP(
-          clickedMission.xp
-        );
+    // XP update happens OUTSIDE the state updater.
+    // This prevents React StrictMode from awarding XP twice.
+    const newXP = isCompleting
+      ? addXP(clickedMission.xp)
+      : removeXP(clickedMission.xp);
 
-        setTotalXP(newXP);
-      } else {
-        const newXP = removeXP(
-          clickedMission.xp
-        );
+    setTotalXP(newXP);
 
-        setTotalXP(newXP);
-      }
-
-      return currentMissions.map(
-        (mission) =>
-          mission.id === id
-            ? {
-                ...mission,
-                completed:
-                  isCompleting,
-              }
-            : mission
-      );
-    });
+    setMissions((currentMissions) =>
+      currentMissions.map((mission) =>
+        mission.id === id
+          ? {
+              ...mission,
+              completed: isCompleting,
+            }
+          : mission
+      )
+    );
   };
 
   // =============================
@@ -367,8 +302,7 @@ function Dashboard() {
 
   useEffect(() => {
     const allMissionsCompleted =
-      completedMissions ===
-      missions.length;
+      completedMissions === missions.length;
 
     if (
       !allMissionsCompleted ||
@@ -380,9 +314,7 @@ function Dashboard() {
     const today = getTodayDate();
 
     const lastCompletedDate =
-      localStorage.getItem(
-        LAST_COMPLETED_KEY
-      );
+      localStorage.getItem(LAST_COMPLETED_KEY);
 
     if (lastCompletedDate === today) {
       streakAwarded.current = true;
@@ -394,8 +326,7 @@ function Dashboard() {
     if (!lastCompletedDate) {
       newStreak = 1;
     } else if (
-      lastCompletedDate ===
-      getYesterdayDate()
+      lastCompletedDate === getYesterdayDate()
     ) {
       newStreak = streak + 1;
     } else {
@@ -438,46 +369,33 @@ function Dashboard() {
   // =============================
 
   const handleChallengeComplete = (id) => {
-    setChallenges(
-      (currentChallenges) => {
-        const clickedChallenge =
-          currentChallenges.find(
-            (challenge) =>
-              challenge.id === id
-          );
+    const clickedChallenge = challenges.find(
+      (challenge) => challenge.id === id
+    );
 
-        if (!clickedChallenge) {
-          return currentChallenges;
-        }
+    if (!clickedChallenge) {
+      return;
+    }
 
-        const isCompleting =
-          !clickedChallenge.completed;
+    const isCompleting = !clickedChallenge.completed;
 
-        if (isCompleting) {
-          const newXP = addXP(
-            clickedChallenge.xp
-          );
+    // XP update happens OUTSIDE the state updater.
+    // This prevents React StrictMode from awarding XP twice.
+    const newXP = isCompleting
+      ? addXP(clickedChallenge.xp)
+      : removeXP(clickedChallenge.xp);
 
-          setTotalXP(newXP);
-        } else {
-          const newXP = removeXP(
-            clickedChallenge.xp
-          );
+    setTotalXP(newXP);
 
-          setTotalXP(newXP);
-        }
-
-        return currentChallenges.map(
-          (challenge) =>
-            challenge.id === id
-              ? {
-                  ...challenge,
-                  completed:
-                    isCompleting,
-                }
-              : challenge
-        );
-      }
+    setChallenges((currentChallenges) =>
+      currentChallenges.map((challenge) =>
+        challenge.id === id
+          ? {
+              ...challenge,
+              completed: isCompleting,
+            }
+          : challenge
+      )
     );
   };
 
