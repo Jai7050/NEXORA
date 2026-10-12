@@ -1,46 +1,67 @@
-import { NavLink } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "./Navbar.css";
 
-function Navbar() {
+export default function Navbar({ onLogout }) {
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    if (typeof onLogout === "function") {
+      onLogout();
+      return;
+    }
+
+    // Fallback if Navbar is used outside App's Dashboard route
+    localStorage.removeItem("nexora_token");
+    localStorage.removeItem("nexora_profile");
+
+    navigate("/login", { replace: true });
+  };
+
   return (
-    <nav className="nexora-navbar">
-
-      <div className="navbar-brand">
-        <span className="navbar-logo">N</span>
-
-        <span className="navbar-title">
-          NEXORA
-        </span>
+    <nav className="nx-navbar">
+      <div
+        className="nx-navbar-brand"
+        onClick={() => navigate("/dashboard")}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") {
+            navigate("/dashboard");
+          }
+        }}
+      >
+        ✦ NEXORA
       </div>
 
-      <div className="navbar-links">
-
-        <NavLink
-          to="/dashboard"
-          className={({ isActive }) =>
-            isActive
-              ? "navbar-link active"
-              : "navbar-link"
-          }
+      <div className="nx-navbar-links">
+        <button
+          type="button"
+          onClick={() => navigate("/dashboard")}
         >
           Dashboard
-        </NavLink>
+        </button>
 
-        <NavLink
-          to="/goals"
-          className={({ isActive }) =>
-            isActive
-              ? "navbar-link active"
-              : "navbar-link"
-          }
+        <button
+          type="button"
+          onClick={() => navigate("/goals")}
         >
           Goals
-        </NavLink>
+        </button>
 
+        <button
+          type="button"
+          onClick={() => navigate("/profile")}
+        >
+          Profile
+        </button>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+        >
+          Logout
+        </button>
       </div>
-
     </nav>
   );
 }
-
-export default Navbar;

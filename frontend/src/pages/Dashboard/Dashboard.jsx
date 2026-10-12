@@ -2,65 +2,55 @@ import { useEffect, useRef, useState } from "react";
 import "./Dashboard.css";
 import BonusChallenges from "../../components/BonusChallenges/BonusChallenges";
 import Navbar from "../../components/Navbar";
-import {
-  getTotalXP,
-  addXP,
-  removeXP,
-} from "../../utils/xpSystem";
+import { getTotalXP, addXP, removeXP } from "../../utils/xpSystem";
 
 const STREAK_KEY = "nexora_streak";
 const LAST_COMPLETED_KEY = "nexora_last_completed_date";
 const BEST_STREAK_KEY = "nexora_best_streak";
-
 const MISSIONS_KEY = "nexora_missions";
 const CHALLENGES_KEY = "nexora_challenges";
-
-function getTodayDate() {
-  return new Date().toISOString().split("T")[0];
-}
-
-function getYesterdayDate() {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  return yesterday.toISOString().split("T")[0];
-}
+const PROFILE_KEY = "nexora_profile";
 
 const defaultMissions = [
   {
     id: 1,
     title: "Study for 1 hour",
-    description: "Improve your knowledge",
+    description: "Invest time in learning something new.",
     xp: 20,
     completed: false,
+    icon: "📚",
   },
   {
     id: 2,
     title: "Exercise",
-    description: "Take care of your body",
+    description: "Build a stronger body and mind.",
     xp: 15,
     completed: false,
+    icon: "💪",
   },
   {
     id: 3,
     title: "Read 10 pages",
-    description: "Build your reading habit",
+    description: "Grow your knowledge one page at a time.",
     xp: 10,
     completed: false,
+    icon: "📖",
   },
   {
     id: 4,
     title: "Drink Water",
-    description: "Stay hydrated",
+    description: "Stay hydrated throughout the day.",
     xp: 10,
     completed: false,
+    icon: "💧",
   },
   {
     id: 5,
     title: "Meditation",
-    description: "Relax your mind",
+    description: "Slow down, breathe, and reset.",
     xp: 15,
     completed: false,
+    icon: "🧘",
   },
 ];
 
@@ -68,159 +58,94 @@ const defaultChallenges = [
   {
     id: 1,
     title: "Complete 20 Push-ups",
-    description: "Challenge your physical strength",
+    description: "Challenge your physical strength.",
     xp: 30,
     completed: false,
   },
   {
     id: 2,
     title: "Study for 2 Hours",
-    description: "Deepen your knowledge",
+    description: "Enter deep-focus mode.",
     xp: 40,
     completed: false,
   },
   {
     id: 3,
     title: "Complete Morning Routine",
-    description: "Start your day with discipline",
+    description: "Start your day with discipline.",
     xp: 25,
     completed: false,
   },
 ];
 
-function loadData(key, defaultData) {
+function getLocalDate(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function loadData(key, fallback) {
   try {
-    const savedData = localStorage.getItem(key);
-
-    return savedData
-      ? JSON.parse(savedData)
-      : defaultData;
-  } catch (error) {
-    console.error(`Failed to load ${key}:`, error);
-
-    return defaultData;
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : fallback;
+  } catch {
+    return fallback;
   }
 }
 
-function Dashboard() {
-  // =============================
-  // DAILY MISSIONS
-  // =============================
+function Dashboard({ onLogout }) {
+  const [profile] = useState(() =>
+    loadData(PROFILE_KEY, {
+      fullName: "",
+      email: "",
+    })
+  );
 
   const [missions, setMissions] = useState(() =>
     loadData(MISSIONS_KEY, defaultMissions)
   );
 
-  // =============================
-  // BONUS CHALLENGES
-  // =============================
-
   const [challenges, setChallenges] = useState(() =>
     loadData(CHALLENGES_KEY, defaultChallenges)
   );
 
-  // =============================
-  // TOTAL XP
-  // =============================
-
   const [totalXP, setTotalXP] = useState(() => getTotalXP());
 
-  // =============================
-  // XP SYNC
-  // =============================
+  const [streak, setStreak] = useState(
+    () => Number(localStorage.getItem(STREAK_KEY)) || 0
+  );
 
-  useEffect(() => {
-    const handleXPUpdate = (event) => {
-      setTotalXP(Number(event.detail) || 0);
-    };
+  const [bestStreak, setBestStreak] = useState(
+    () => Number(localStorage.getItem(BEST_STREAK_KEY)) || 0
+  );
 
-    window.addEventListener(
-      "nexora-xp-updated",
-      handleXPUpdate
-    );
+  const [showLevelUp, setShowLevelUp] = useState(false);
 
-    return () => {
-      window.removeEventListener(
-        "nexora-xp-updated",
-        handleXPUpdate
-      );
-    };
-  }, []);
+  const previousLevel = useRef(
+    Math.min(Math.floor(totalXP / 100) + 1, 10)
+  );
 
-  // =============================
-  // SYNC WHEN TAB / APP BECOMES ACTIVE
-  // =============================
-
-  useEffect(() => {
-    const syncXP = () => {
-      setTotalXP(getTotalXP());
-    };
-
-    window.addEventListener("storage", syncXP);
-    window.addEventListener("focus", syncXP);
-
-    return () => {
-      window.removeEventListener("storage", syncXP);
-      window.removeEventListener("focus", syncXP);
-    };
-  }, []);
-
-  // =============================
-  // STREAK
-  // =============================
-
-  const [streak, setStreak] = useState(() => {
-    const savedStreak =
-      localStorage.getItem(STREAK_KEY);
-
-    return savedStreak
-      ? Number(savedStreak)
-      : 0;
-  });
-
-  const [bestStreak, setBestStreak] = useState(() => {
-    const savedBestStreak =
-      localStorage.getItem(BEST_STREAK_KEY);
-
-    return savedBestStreak
-      ? Number(savedBestStreak)
-      : 0;
-  });
-
-  const streakAwarded = useRef(false);
-
-  // =============================
-  // DAILY MISSION DATA
-  // =============================
+  const [notice, setNotice] = useState("");
 
   const completedMissions = missions.filter(
     (mission) => mission.completed
   ).length;
 
-  const missionProgress = Math.round(
-    (completedMissions / missions.length) * 100
-  );
-
-  // =============================
-  // BONUS DATA
-  // =============================
-
   const completedChallenges = challenges.filter(
     (challenge) => challenge.completed
   ).length;
 
-  const challengeProgress = Math.round(
-    (completedChallenges / challenges.length) * 100
-  );
+  const missionProgress = missions.length
+    ? Math.round((completedMissions / missions.length) * 100)
+    : 0;
 
-  // =============================
-  // LEVEL SYSTEM
-  // =============================
+  const challengeProgress = challenges.length
+    ? Math.round((completedChallenges / challenges.length) * 100)
+    : 0;
 
-  const level = Math.min(
-    Math.floor(totalXP / 100) + 1,
-    10
-  );
+  const level = Math.min(Math.floor(totalXP / 100) + 1, 10);
 
   const ranks = [
     "Awakened",
@@ -236,490 +161,468 @@ function Dashboard() {
   ];
 
   const rank = ranks[level - 1];
+  const xpInCurrentLevel = level === 10 ? 100 : totalXP % 100;
 
-  const xpInCurrentLevel = totalXP % 100;
+  const displayName =
+    profile.fullName?.trim() ||
+    profile.email?.split("@")[0] ||
+    "Player";
 
-  // =============================
-  // LEVEL UP
-  // =============================
-
-  const [showLevelUp, setShowLevelUp] = useState(false);
-
-  const [previousLevel, setPreviousLevel] =
-    useState(level);
-
+  // Synchronize XP
   useEffect(() => {
-    if (level > previousLevel) {
+    const syncXP = () => setTotalXP(getTotalXP());
+
+    window.addEventListener("nexora-xp-updated", syncXP);
+    window.addEventListener("focus", syncXP);
+    window.addEventListener("storage", syncXP);
+
+    return () => {
+      window.removeEventListener("nexora-xp-updated", syncXP);
+      window.removeEventListener("focus", syncXP);
+      window.removeEventListener("storage", syncXP);
+    };
+  }, []);
+
+  // Level-up notification
+  useEffect(() => {
+    if (level > previousLevel.current) {
       setShowLevelUp(true);
-      setPreviousLevel(level);
     }
-  }, [level, previousLevel]);
 
-  // =============================
-  // SAVE MISSIONS
-  // =============================
+    previousLevel.current = level;
+  }, [level]);
 
+  // Save missions
   useEffect(() => {
-    localStorage.setItem(
-      MISSIONS_KEY,
-      JSON.stringify(missions)
-    );
+    localStorage.setItem(MISSIONS_KEY, JSON.stringify(missions));
   }, [missions]);
 
-  // =============================
-  // SAVE CHALLENGES
-  // =============================
-
+  // Save challenges
   useEffect(() => {
-    localStorage.setItem(
-      CHALLENGES_KEY,
-      JSON.stringify(challenges)
-    );
+    localStorage.setItem(CHALLENGES_KEY, JSON.stringify(challenges));
   }, [challenges]);
 
-  // =============================
-  // MISSION HANDLER
-  // =============================
-
-  const handleMissionComplete = (id) => {
-    const clickedMission = missions.find(
-      (mission) => mission.id === id
-    );
-
-    if (!clickedMission) {
-      return;
-    }
-
-    const isCompleting = !clickedMission.completed;
-
-    // IMPORTANT:
-    // XP update is outside setMissions()
-    // to prevent duplicate XP in StrictMode.
-    const newXP = isCompleting
-      ? addXP(clickedMission.xp)
-      : removeXP(clickedMission.xp);
-
-    setTotalXP(newXP);
-
-    setMissions((currentMissions) =>
-      currentMissions.map((mission) =>
-        mission.id === id
-          ? {
-              ...mission,
-              completed: isCompleting,
-            }
-          : mission
-      )
-    );
-  };
-
-  // =============================
-  // STREAK SYSTEM
-  // =============================
-
+  // Update streak when all daily missions are completed
   useEffect(() => {
-    const allMissionsCompleted =
-      completedMissions === missions.length;
-
-    if (
-      !allMissionsCompleted ||
-      streakAwarded.current
-    ) {
+    if (!missions.length || completedMissions !== missions.length) {
       return;
     }
 
-    const today = getTodayDate();
+    const today = getLocalDate();
+    const lastCompleted = localStorage.getItem(LAST_COMPLETED_KEY);
 
-    const lastCompletedDate =
-      localStorage.getItem(
-        LAST_COMPLETED_KEY
-      );
-
-    if (lastCompletedDate === today) {
-      streakAwarded.current = true;
+    if (lastCompleted === today) {
       return;
     }
 
-    let newStreak = streak;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
 
-    if (!lastCompletedDate) {
-      newStreak = 1;
-    } else if (
-      lastCompletedDate === getYesterdayDate()
-    ) {
-      newStreak = streak + 1;
-    } else {
-      newStreak = 1;
-    }
+    const newStreak =
+      lastCompleted === getLocalDate(yesterday) ? streak + 1 : 1;
 
-    const newBestStreak = Math.max(
-      bestStreak,
-      newStreak
-    );
+    const newBest = Math.max(bestStreak, newStreak);
 
     setStreak(newStreak);
-    setBestStreak(newBestStreak);
+    setBestStreak(newBest);
 
-    localStorage.setItem(
-      STREAK_KEY,
-      String(newStreak)
-    );
+    localStorage.setItem(STREAK_KEY, String(newStreak));
+    localStorage.setItem(BEST_STREAK_KEY, String(newBest));
+    localStorage.setItem(LAST_COMPLETED_KEY, today);
+  }, [completedMissions, missions.length, streak, bestStreak]);
 
-    localStorage.setItem(
-      BEST_STREAK_KEY,
-      String(newBestStreak)
-    );
+  // Complete or undo a mission
+  const handleMissionComplete = (id) => {
+    const mission = missions.find((item) => item.id === id);
 
-    localStorage.setItem(
-      LAST_COMPLETED_KEY,
-      today
-    );
+    if (!mission) return;
 
-    streakAwarded.current = true;
-  }, [
-    completedMissions,
-    missions.length,
-    streak,
-    bestStreak,
-  ]);
+    const completing = !mission.completed;
 
-  // =============================
-  // BONUS CHALLENGE HANDLER
-  // =============================
+    const updatedXP = completing
+      ? addXP(mission.xp)
+      : removeXP(mission.xp);
 
-  const handleChallengeComplete = (id) => {
-    const clickedChallenge = challenges.find(
-      (challenge) => challenge.id === id
-    );
+    setTotalXP(updatedXP);
 
-    if (!clickedChallenge) {
-      return;
-    }
-
-    const isCompleting =
-      !clickedChallenge.completed;
-
-    // IMPORTANT:
-    // XP update is outside setChallenges()
-    // to prevent duplicate XP in StrictMode.
-    const newXP = isCompleting
-      ? addXP(clickedChallenge.xp)
-      : removeXP(clickedChallenge.xp);
-
-    setTotalXP(newXP);
-
-    setChallenges((currentChallenges) =>
-      currentChallenges.map((challenge) =>
-        challenge.id === id
-          ? {
-              ...challenge,
-              completed: isCompleting,
-            }
-          : challenge
+    setMissions((current) =>
+      current.map((item) =>
+        item.id === id
+          ? { ...item, completed: completing }
+          : item
       )
     );
+
+    setNotice(
+      completing
+        ? `+${mission.xp} XP earned! Keep going!`
+        : `${mission.xp} XP removed. Mission reopened.`
+    );
+
+    window.setTimeout(() => setNotice(""), 2500);
   };
 
-  // =============================
-  // UI
-  // =============================
+  // Complete or undo a bonus challenge
+  const handleChallengeComplete = (id) => {
+    const challenge = challenges.find((item) => item.id === id);
+
+    if (!challenge) return;
+
+    const completing = !challenge.completed;
+
+    const updatedXP = completing
+      ? addXP(challenge.xp)
+      : removeXP(challenge.xp);
+
+    setTotalXP(updatedXP);
+
+    setChallenges((current) =>
+      current.map((item) =>
+        item.id === id
+          ? { ...item, completed: completing }
+          : item
+      )
+    );
+
+    setNotice(
+      completing
+        ? `Challenge completed! +${challenge.xp} XP`
+        : "Challenge reopened."
+    );
+
+    window.setTimeout(() => setNotice(""), 2500);
+  };
+
+  // Reset missions on a new local calendar day
+  const resetMissions = () => {
+    const lastReset = localStorage.getItem("nexora_missions_reset");
+
+    if (lastReset === getLocalDate()) return;
+
+    setMissions((current) =>
+      current.map((mission) => ({
+        ...mission,
+        completed: false,
+      }))
+    );
+
+    setChallenges((current) =>
+      current.map((challenge) => ({
+        ...challenge,
+        completed: false,
+      }))
+    );
+
+    localStorage.setItem("nexora_missions_reset", getLocalDate());
+  };
+
+  useEffect(() => {
+    resetMissions();
+
+    const interval = window.setInterval(
+      resetMissions,
+      60 * 1000
+    );
+
+    return () => window.clearInterval(interval);
+  }, []);
 
   return (
     <>
-      {/* NEXORA NAVIGATION */}
-      <Navbar />
+      {/* Pass logout handler to Navbar */}
+      <Navbar onLogout={onLogout} />
 
-      <div className="dashboard-page">
+      <main className="nx-dashboard">
+        {/* Welcome banner */}
+        <section className="nx-welcome">
+          <div className="nx-welcome-content">
+            <span className="nx-eyebrow">
+              YOUR PERSONAL GROWTH SYSTEM
+            </span>
 
-        {/* LEVEL UP POPUP */}
+            <h1>
+              Welcome back, <span>{displayName}</span>
+            </h1>
 
-        {showLevelUp && (
-          <div className="level-up-overlay">
+            <p>
+              Every small win moves you forward. Make today count.
+            </p>
 
-            <div className="level-up-card">
+            <div className="nx-welcome-tags">
+              <span>⚡ Level {level}</span>
+              <span>✦ {rank}</span>
+            </div>
+          </div>
 
-              <div className="level-up-icon">
-                ⚡
-              </div>
-
-              <p className="system-label">
-                NEXORA SYSTEM
-              </p>
-
-              <h2>
-                LEVEL UP!
-              </h2>
-
-              <div className="new-level">
-                LEVEL {level}
-              </div>
-
-              <div className="new-rank">
-                {rank}
-              </div>
-
-              <p className="level-message">
-                Your progress has unlocked
-                a new rank.
-              </p>
-
-              <button
-                className="level-up-button"
-                onClick={() =>
-                  setShowLevelUp(false)
-                }
-              >
-                CONTINUE
-              </button>
-
+          <div className="nx-welcome-emblem" aria-hidden="true">
+            <div className="nx-emblem-ring">
+              <span>✦</span>
             </div>
 
+            <span className="nx-emblem-caption">NEXORA</span>
+          </div>
+        </section>
+
+        {/* Level and XP */}
+        <section className="nx-level-card">
+          <div className="nx-level-top">
+            <div className="nx-level-icon">⚡</div>
+
+            <div className="nx-level-details">
+              <span className="nx-label">CURRENT RANK</span>
+              <h2>{rank}</h2>
+              <p>Level {level} adventurer</p>
+            </div>
+
+            <div className="nx-xp-total">
+              <span>TOTAL EXPERIENCE</span>
+              <strong>{totalXP.toLocaleString()} XP</strong>
+            </div>
+          </div>
+
+          <div className="nx-level-progress-heading">
+            <span>Level progress</span>
+
+            <strong>
+              {level === 10
+                ? "MAX LEVEL"
+                : `${xpInCurrentLevel} / 100 XP`}
+            </strong>
+          </div>
+
+          <div
+            className="nx-progress-track nx-level-track"
+            role="progressbar"
+            aria-valuenow={xpInCurrentLevel}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Level progress"
+          >
+            <div
+              className="nx-progress-fill nx-xp-fill"
+              style={{ width: `${xpInCurrentLevel}%` }}
+            />
+          </div>
+
+          <p className="nx-level-hint">
+            {level === 10
+              ? "You've reached Nexora Prime. Keep building your streak!"
+              : `${100 - xpInCurrentLevel} XP to reach the next level.`}
+          </p>
+        </section>
+
+        {/* Stats */}
+        <section className="nx-stats-grid">
+          <article className="nx-stat-card">
+            <div className="nx-stat-icon purple">🎯</div>
+            <span>Daily missions</span>
+
+            <strong>
+              {completedMissions}
+              <small> / {missions.length}</small>
+            </strong>
+
+            <p>{missionProgress}% completed</p>
+          </article>
+
+          <article className="nx-stat-card">
+            <div className="nx-stat-icon orange">🔥</div>
+            <span>Current streak</span>
+
+            <strong>
+              {streak}
+              <small> days</small>
+            </strong>
+
+            <p>Best: {bestStreak} days</p>
+          </article>
+
+          <article className="nx-stat-card">
+            <div className="nx-stat-icon green">🏆</div>
+            <span>Bonus challenges</span>
+
+            <strong>
+              {completedChallenges}
+              <small> / {challenges.length}</small>
+            </strong>
+
+            <p>{challengeProgress}% completed</p>
+          </article>
+
+          <article className="nx-stat-card">
+            <div className="nx-stat-icon blue">✨</div>
+            <span>Total experience</span>
+
+            <strong>{totalXP.toLocaleString()}</strong>
+
+            <p>XP earned so far</p>
+          </article>
+        </section>
+
+        {notice && (
+          <div className="nx-toast" role="status">
+            <span>✓</span> {notice}
           </div>
         )}
 
-        {/* HEADER */}
-
-        <div className="dashboard-header">
-
-          <div>
-
-            <p className="welcome-text">
-              Welcome back, Player
-            </p>
-
-            <h1>
-              NEXORA
-            </h1>
-
-            <p className="level-text">
-              Level {level} • {rank}
-            </p>
-
-          </div>
-
-          <div className="xp-box">
-
-            <span>
-              XP
-            </span>
-
-            <strong>
-              {xpInCurrentLevel} / 100
-            </strong>
-
-          </div>
-
-        </div>
-
-        {/* DAILY PROGRESS */}
-
-        <div className="progress-card">
-
-          <div className="card-title">
-
-            <span>
-              Today's Mission Progress
-            </span>
-
-            <strong>
-              {missionProgress}%
-            </strong>
-
-          </div>
-
-          <div className="progress-bar">
-
-            <div
-              className="progress-fill"
-              style={{
-                width: `${missionProgress}%`,
-              }}
-            />
-
-          </div>
-
-        </div>
-
-        {/* DAILY MISSIONS */}
-
-        <section className="dashboard-section">
-
-          <h2>
-            Today's Missions
-          </h2>
-
-          {missions.map((mission) => (
-
-            <div
-              className={`mission-card ${
-                mission.completed
-                  ? "completed"
-                  : ""
-              }`}
-              key={mission.id}
-              onClick={() =>
-                handleMissionComplete(
-                  mission.id
-                )
-              }
-            >
-
-              <div className="mission-left">
-
-                <div
-                  className={`mission-check ${
-                    mission.completed
-                      ? "checked"
-                      : ""
-                  }`}
-                >
-                  {mission.completed
-                    ? "✓"
-                    : ""}
-                </div>
-
-                <div>
-
-                  <h3>
-                    {mission.title}
-                  </h3>
-
-                  <p>
-                    {mission.description}
-                  </p>
-
-                </div>
-
-              </div>
-
-              <span>
-                +{mission.xp} XP
-              </span>
-
+        {/* Daily missions */}
+        <section className="nx-section">
+          <div className="nx-section-heading">
+            <div>
+              <span className="nx-eyebrow">BUILD YOUR HABITS</span>
+              <h2>Today's Missions</h2>
+              <p>
+                Consistency beats intensity. Complete your daily goals.
+              </p>
             </div>
 
-          ))}
+            <div className="nx-section-count">
+              {completedMissions}/{missions.length} DONE
+            </div>
+          </div>
 
+          <div className="nx-mission-list">
+            {missions.map((mission) => (
+              <button
+                type="button"
+                key={mission.id}
+                className={`nx-mission-card ${
+                  mission.completed ? "is-completed" : ""
+                }`}
+                onClick={() => handleMissionComplete(mission.id)}
+                aria-pressed={mission.completed}
+              >
+                <span className="nx-mission-icon">
+                  {mission.icon || "✦"}
+                </span>
+
+                <span className="nx-mission-copy">
+                  <strong>{mission.title}</strong>
+                  <small>{mission.description}</small>
+                </span>
+
+                <span className="nx-mission-reward">
+                  {mission.completed
+                    ? "✓ Completed"
+                    : `+${mission.xp} XP`}
+                </span>
+
+                <span className="nx-mission-check">
+                  {mission.completed ? "✓" : ""}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="nx-section-progress">
+            <div className="nx-section-progress-heading">
+              <span>Daily progress</span>
+              <strong>{missionProgress}%</strong>
+            </div>
+
+            <div className="nx-progress-track">
+              <div
+                className="nx-progress-fill"
+                style={{ width: `${missionProgress}%` }}
+              />
+            </div>
+          </div>
         </section>
 
-        {/* BONUS CHALLENGES */}
+        {/* Bonus challenges */}
+        <section className="nx-section nx-challenge-section">
+          <div className="nx-section-heading">
+            <div>
+              <span className="nx-eyebrow">
+                GO BEYOND THE ORDINARY
+              </span>
 
-        <BonusChallenges
-          challenges={challenges}
-          onComplete={
-            handleChallengeComplete
-          }
-        />
+              <h2>Bonus Challenges</h2>
 
-        {/* BONUS PROGRESS */}
+              <p>
+                Take on bigger goals and earn extra experience.
+              </p>
+            </div>
 
-        <div className="progress-card">
-
-          <div className="card-title">
-
-            <span>
-              Bonus Challenge Progress
-            </span>
-
-            <strong>
-              {challengeProgress}%
-            </strong>
-
+            <div className="nx-challenge-symbol">✧</div>
           </div>
 
-          <div className="progress-bar">
+          <BonusChallenges
+            challenges={challenges}
+            onComplete={handleChallengeComplete}
+          />
 
-            <div
-              className="progress-fill"
-              style={{
-                width: `${challengeProgress}%`,
-              }}
-            />
+          <div className="nx-section-progress">
+            <div className="nx-section-progress-heading">
+              <span>Challenge progress</span>
+              <strong>{challengeProgress}%</strong>
+            </div>
 
+            <div className="nx-progress-track">
+              <div
+                className="nx-progress-fill nx-challenge-fill"
+                style={{ width: `${challengeProgress}%` }}
+              />
+            </div>
           </div>
+        </section>
 
-        </div>
+        {/* Daily motivation */}
+        <section className="nx-quote-card">
+          <span className="nx-quote-mark">“</span>
 
-        {/* STATS */}
-
-        <div className="stats-grid">
-
-          {/* TOTAL XP */}
-
-          <div className="stat-card">
-
-            <span>
-              Total XP
-            </span>
-
-            <strong>
-              {totalXP}
-            </strong>
+          <div>
+            <span className="nx-eyebrow">YOUR DAILY REMINDER</span>
+            <h3>Become 1% better every day.</h3>
 
             <p>
-              Earned XP
+              You don't have to be perfect. You just have to keep showing up.
             </p>
-
           </div>
 
-          {/* MISSIONS */}
+          <span className="nx-quote-star">✦</span>
+        </section>
 
-          <div className="stat-card">
+        <footer className="nx-dashboard-footer">
+          <span>✦ NEXORA</span>
+          <p>Your journey. Your progress. Your next level.</p>
+        </footer>
 
-            <span>
-              Missions
-            </span>
+        {/* Level-up modal */}
+        {showLevelUp && (
+          <div className="nx-modal-overlay">
+            <section
+              className="nx-level-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="nx-level-modal-title"
+            >
+              <div className="nx-modal-symbol">⚡</div>
 
-            <strong>
-              {completedMissions} /{" "}
-              {missions.length}
-            </strong>
+              <span className="nx-eyebrow">
+                ACHIEVEMENT UNLOCKED
+              </span>
 
-            <p>
-              Completed Today
-            </p>
+              <h2 id="nx-level-modal-title">LEVEL UP!</h2>
+              <p className="nx-modal-level">LEVEL {level}</p>
+              <h3>{rank}</h3>
 
+              <p>
+                Your hard work is paying off. Keep moving forward!
+              </p>
+
+              <button
+                type="button"
+                className="nx-continue-button"
+                onClick={() => setShowLevelUp(false)}
+                autoFocus
+              >
+                CONTINUE YOUR JOURNEY →
+              </button>
+            </section>
           </div>
-
-          {/* STREAK */}
-
-          <div className="stat-card streak-card">
-
-            <span>
-              🔥 Streak
-            </span>
-
-            <strong>
-              {streak} Days
-            </strong>
-
-            <p>
-              Best: {bestStreak} Days
-            </p>
-
-          </div>
-
-          {/* RANK */}
-
-          <div className="stat-card">
-
-            <span>
-              Rank
-            </span>
-
-            <strong>
-              {rank}
-            </strong>
-
-            <p>
-              Level {level}
-            </p>
-
-          </div>
-
-        </div>
-
-      </div>
+        )}
+      </main>
     </>
   );
 }

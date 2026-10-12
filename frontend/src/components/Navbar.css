@@ -1,91 +1,222 @@
-.nexora-navbar {
+/* ================================
+   NEXORA NAVBAR
+================================ */
+
+.nx-navbar {
   width: 100%;
-  min-height: 68px;
+  min-height: 72px;
+  padding: 0 5%;
+  box-sizing: border-box;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
 
-  padding: 0 32px;
-
-  box-sizing: border-box;
-
-  background: #0b1220;
-
-  border-bottom: 1px solid #273449;
+  background: #0b0d17;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.2);
 
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1000;
 }
 
-.navbar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+/* ================================
+   BRAND / LOGO
+================================ */
 
-.navbar-logo {
-  font-size: 30px;
-  font-weight: 500;
-  color: #8b5cf6;
-}
-
-.navbar-title {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: #ffffff;
-}
-
-.navbar-links {
-  display: flex;
+.nx-navbar-brand {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-}
 
-.navbar-link {
-  padding: 10px 16px;
+  color: #f5f3ff;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: 1px;
 
-  border-radius: 9px;
-
-  color: #94a3b8;
-
-  text-decoration: none;
-
-  font-size: 14px;
-  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
 
   transition:
     color 0.2s ease,
-    background 0.2s ease;
+    transform 0.2s ease;
 }
 
-.navbar-link:hover {
+.nx-navbar-brand:hover {
+  color: #b9a0ff;
+  transform: translateY(-1px);
+}
+
+.nx-navbar-brand:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 5px;
+  border-radius: 4px;
+}
+
+/* ================================
+   NAVIGATION LINKS
+================================ */
+
+.nx-navbar-links {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ================================
+   NAVIGATION BUTTONS
+================================ */
+
+.nx-navbar-links button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 42px;
+  padding: 10px 16px;
+
+  border: 1px solid rgba(167, 139, 250, 0.18);
+  border-radius: 10px;
+
+  background: #151522;
+  color: #e9e5ff;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+
+  cursor: pointer;
+  white-space: nowrap;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Hover effect */
+
+.nx-navbar-links button:hover {
+  background: #28213e;
+  border-color: #8b70e8;
   color: #ffffff;
-  background: rgba(139, 92, 246, 0.1);
+  transform: translateY(-1px);
 }
 
-.navbar-link.active {
+/* Keyboard accessibility */
+
+.nx-navbar-links button:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
+
+/* Click effect */
+
+.nx-navbar-links button:active {
+  transform: translateY(0);
+}
+
+/* ================================
+   LOGOUT BUTTON
+================================ */
+
+.nx-navbar-links button:last-child {
+  background: linear-gradient(135deg, #7955e8, #6240ce);
+  border-color: #7955e8;
   color: #ffffff;
-  background: rgba(139, 92, 246, 0.18);
+
+  padding-left: 20px;
+  padding-right: 20px;
+
+  box-shadow: 0 4px 14px rgba(121, 85, 232, 0.16);
 }
 
-@media (max-width: 600px) {
-  .nexora-navbar {
-    padding: 0 16px;
+.nx-navbar-links button:last-child:hover {
+  background: linear-gradient(135deg, #8c6af2, #704ce0);
+  border-color: #a18aff;
+
+  box-shadow: 0 6px 18px rgba(121, 85, 232, 0.28);
+}
+
+/* ================================
+   TABLET RESPONSIVE
+================================ */
+
+@media (max-width: 768px) {
+  .nx-navbar {
+    min-height: 68px;
+    padding: 12px 4%;
+    gap: 16px;
   }
 
-  .navbar-title {
-    display: none;
+  .nx-navbar-brand {
+    font-size: 21px;
   }
 
-  .navbar-links {
-    gap: 2px;
+  .nx-navbar-links {
+    gap: 7px;
   }
 
-  .navbar-link {
-    padding: 9px 11px;
+  .nx-navbar-links button {
+    min-height: 38px;
+    padding: 9px 12px;
     font-size: 13px;
+  }
+}
+
+/* ================================
+   MOBILE RESPONSIVE
+================================ */
+
+@media (max-width: 520px) {
+  .nx-navbar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 5%;
+  }
+
+  .nx-navbar-brand {
+    font-size: 22px;
+  }
+
+  .nx-navbar-links {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .nx-navbar-links button {
+    min-height: 38px;
+    padding: 9px 12px;
+    font-size: 12px;
+  }
+
+  .nx-navbar-links button:last-child {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+}
+
+/* ================================
+   SMALL MOBILE
+================================ */
+
+@media (max-width: 360px) {
+  .nx-navbar-links {
+    gap: 6px;
+  }
+
+  .nx-navbar-links button {
+    padding: 8px 10px;
+    font-size: 11px;
   }
 }

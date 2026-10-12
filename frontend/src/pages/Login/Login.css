@@ -1,306 +1,131 @@
-/* ================================
-   NEXORA LOGIN PAGE
-================================ */
-
 .login-page {
   min-height: 100vh;
-  width: 100%;
   display: flex;
-  justify-content: center;
   align-items: center;
-  box-sizing: border-box;
+  justify-content: center;
   padding: 24px;
-
-  background:
-    radial-gradient(
-      circle at top,
-      rgba(139, 92, 246, 0.12),
-      transparent 35%
-    ),
-    #080f1d;
-
-  color: #ffffff;
+  box-sizing: border-box;
+  background: linear-gradient(135deg, #171027, #0c0915);
+  color: #fff;
+  font-family: Arial, sans-serif;
 }
-
-/* ================================
-   LOGIN CARD
-================================ */
 
 .login-card {
   width: 100%;
-  max-width: 430px;
+  max-width: 460px;
+  padding: 42px;
   box-sizing: border-box;
-
-  padding: 42px 40px;
-
-  background: rgba(17, 24, 39, 0.96);
-
-  border: 1px solid #273449;
-  border-radius: 22px;
-
-  text-align: center;
-
-  box-shadow:
-    0 20px 60px rgba(0, 0, 0, 0.35),
-    0 0 35px rgba(139, 92, 246, 0.08);
+  background: #1d172b;
+  border: 1px solid #44345f;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
 }
-
-/* ================================
-   LOGO
-================================ */
 
 .login-logo {
-  margin-bottom: 8px;
-
-  font-size: 54px;
-  line-height: 1;
-
-  font-weight: 500;
-
-  color: #8b5cf6;
-
-  text-shadow:
-    0 0 18px rgba(139, 92, 246, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 14px;
+  border-radius: 12px;
+  background: #8b5cf6;
+  font-size: 24px;
+  font-weight: bold;
 }
-
-/* ================================
-   TITLE
-================================ */
 
 .login-card h1 {
   margin: 0;
-
-  font-size: 42px;
-  line-height: 1.1;
-
-  font-weight: 700;
-
-  letter-spacing: 6px;
-
-  color: #ffffff;
+  font-size: 34px;
 }
-
-/* ================================
-   SUBTITLE
-================================ */
 
 .login-subtitle {
-  margin: 10px 0 32px;
-
-  color: #94a3b8;
-
-  font-size: 15px;
-  line-height: 1.5;
-
-  letter-spacing: 0.5px;
+  margin: 12px 0 30px;
+  color: #b8accf;
 }
-
-/* ================================
-   FORM
-================================ */
-
-.login-card form {
-  width: 100%;
-}
-
-/* ================================
-   FORM GROUP
-================================ */
 
 .form-group {
-  width: 100%;
-
-  text-align: left;
-
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-bottom: 20px;
 }
 
 .form-group label {
-  display: block;
-
-  margin-bottom: 8px;
-
-  color: #dbe3ef;
-
   font-size: 14px;
-  font-weight: 500;
+  color: #e4dcef;
 }
-
-/* ================================
-   INPUT
-================================ */
 
 .form-group input {
   width: 100%;
-  height: 50px;
-
+  padding: 13px 14px;
   box-sizing: border-box;
-
-  padding: 0 15px;
-
-  border: 1px solid #334155;
-  border-radius: 11px;
-
-  outline: none;
-
-  background: #0b1220;
-
-  color: #ffffff;
-
+  border: 1px solid #493960;
+  border-radius: 9px;
+  background: #120d1c;
+  color: #fff;
   font-size: 15px;
-
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background 0.2s ease;
-}
-
-.form-group input:hover {
-  border-color: #475569;
+  outline: none;
 }
 
 .form-group input:focus {
-  border-color: #8b5cf6;
-
-  background: #0c1425;
-
-  box-shadow:
-    0 0 0 3px rgba(139, 92, 246, 0.12);
+  border-color: #a78bfa;
 }
 
 .form-group input::placeholder {
-  color: #64748b;
+  color: #8e829f;
 }
 
-/* ================================
-   LOGIN BUTTON
-================================ */
+.login-forgot {
+  margin: 0 0 20px;
+  text-align: right;
+}
+
+.login-forgot a,
+.register-link {
+  color: #b8a0ff;
+  text-decoration: none;
+}
 
 .login-button {
   width: 100%;
-  height: 50px;
-
-  margin-top: 4px;
-
+  padding: 14px;
   border: none;
-  border-radius: 11px;
-
+  border-radius: 9px;
   background: #8b5cf6;
-
-  color: #ffffff;
-
+  color: #fff;
   font-size: 15px;
-  font-weight: 700;
-
-  letter-spacing: 1px;
-
+  font-weight: bold;
   cursor: pointer;
-
-  transition:
-    background 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
 }
 
 .login-button:hover {
-  background: #7c3aed;
-
-  box-shadow:
-    0 8px 25px rgba(124, 58, 237, 0.25);
-
-  transform: translateY(-1px);
+  background: #7544e8;
 }
 
-.login-button:active {
-  transform: translateY(0);
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
-/* ================================
-   REGISTER TEXT
-================================ */
+.login-error {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #401d2b;
+  color: #ffb4c0;
+  font-size: 14px;
+}
 
 .register-text {
-  margin: 25px 0 0;
-
-  color: #94a3b8;
-
+  margin: 24px 0 0;
+  text-align: center;
+  color: #c2b8d0;
   font-size: 14px;
 }
 
-/* ================================
-   REGISTER LINK
-================================ */
-
-.register-link {
-  margin-left: 5px;
-
-  padding: 0;
-
-  border: none;
-
-  background: transparent;
-
-  color: #a78bfa;
-
-  font-size: 14px;
-  font-weight: 600;
-
-  cursor: pointer;
-
-  transition: color 0.2s ease;
-}
-
-.register-link:hover {
-  color: #c4b5fd;
-
-  text-decoration: underline;
-}
-
-/* ================================
-   MOBILE
-================================ */
-
-@media (max-width: 600px) {
-  .login-page {
-    padding: 16px;
-  }
-
+@media (max-width: 480px) {
   .login-card {
-    max-width: 100%;
-
-    padding: 34px 24px;
-
-    border-radius: 18px;
-  }
-
-  .login-logo {
-    font-size: 48px;
-  }
-
-  .login-card h1 {
-    font-size: 34px;
-
-    letter-spacing: 5px;
-  }
-
-  .login-subtitle {
-    margin-bottom: 26px;
-  }
-}
-
-@media (max-width: 380px) {
-  .login-card {
-    padding: 28px 18px;
-  }
-
-  .login-card h1 {
-    font-size: 30px;
-
-    letter-spacing: 4px;
-  }
-
-  .form-group input,
-  .login-button {
-    height: 48px;
+    padding: 28px 22px;
   }
 }
