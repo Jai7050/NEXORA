@@ -1,493 +1,278 @@
 .study-reminder {
   width: 100%;
-  margin: 20px 0;
-  color: #f5f3ff;
-}
-
-.study-reminder * {
+  padding: 24px;
+  color: #1f2937;
   box-sizing: border-box;
 }
 
-.sr-heading {
+.study-reminder *,
+.study-reminder *::before,
+.study-reminder *::after {
+  box-sizing: border-box;
+}
+
+.study-reminder-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
   margin-bottom: 24px;
 }
 
-.sr-eyebrow {
-  display: block;
-  margin-bottom: 8px;
-  color: #a78bfa;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 2px;
-}
-
-.sr-heading h2 {
+.study-reminder-header h2 {
   margin: 0 0 8px;
-  color: #fff;
-  font-size: clamp(24px, 3vw, 32px);
+  font-size: 26px;
 }
 
-.sr-heading p {
+.study-reminder-header p {
   margin: 0;
-  color: #a5a2bc;
-  font-size: 14px;
-  line-height: 1.6;
+  color: #6b7280;
 }
 
-.sr-heading-icon {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border: 1px solid rgba(167, 139, 250, 0.3);
-  border-radius: 20px;
-  background: rgba(139, 92, 246, 0.13);
-  font-size: 30px;
+.study-reminder button {
+  border: none;
+  border-radius: 8px;
+  padding: 11px 16px;
+  background: #4f46e5;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
-.sr-message {
-  margin-bottom: 20px;
+.study-reminder button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.study-reminder button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.study-reminder .study-notification-button {
+  background: #0f766e;
+}
+
+.study-reminder .study-secondary-button {
+  background: #64748b;
+}
+
+.study-reminder .study-delete-button {
+  background: #dc2626;
+}
+
+.study-reminder .study-refresh-button {
+  width: 100%;
+  margin-top: 20px;
+  background: #374151;
+}
+
+.study-success-message,
+.study-error-message {
   padding: 14px 16px;
-  border: 1px solid rgba(167, 139, 250, 0.3);
-  border-radius: 12px;
-  background: rgba(139, 92, 246, 0.12);
-  color: #ddd6fe;
-  font-size: 14px;
-  line-height: 1.6;
+  margin-bottom: 18px;
+  border-radius: 9px;
+  overflow-wrap: anywhere;
 }
 
-.sr-grid {
+.study-success-message {
+  color: #166534;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+}
+
+.study-error-message {
+  color: #991b1b;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+}
+
+.study-error-message p {
+  margin-bottom: 0;
+}
+
+.study-reminder-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px;
+  gap: 22px;
+  align-items: start;
 }
 
-.sr-card,
-.sr-schedule-card {
+.study-card {
   min-width: 0;
-  padding: 24px;
-  border: 1px solid rgba(167, 139, 250, 0.16);
-  border-radius: 20px;
-  background: linear-gradient(
-    145deg,
-    rgba(31, 28, 53, 0.97),
-    rgba(18, 17, 34, 0.98)
-  );
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+  padding: 22px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 18px rgb(0 0 0 / 5%);
 }
 
-.sr-card-heading {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 24px;
+.study-card h3 {
+  margin: 0 0 20px;
+  font-size: 20px;
 }
 
-.sr-card-icon {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 13px;
-  background: rgba(139, 92, 246, 0.16);
-  font-size: 21px;
-}
-
-.sr-card-heading h3 {
-  margin: 0 0 5px;
-  color: #fff;
-  font-size: 17px;
-}
-
-.sr-card-heading p {
-  margin: 0;
-  color: #a5a2bc;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.sr-form {
+.study-schedule-form {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.sr-form label:not(.sr-checkbox) {
-  margin-top: 5px;
-  color: #d5d1e7;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.sr-form input[type="text"],
-.sr-form input[type="date"],
-.sr-form input[type="time"],
-.sr-form select {
-  width: 100%;
-  min-height: 46px;
-  padding: 10px 12px;
-  border: 1px solid rgba(167, 139, 250, 0.23);
-  border-radius: 10px;
-  outline: none;
-  background: #171529;
-  color: #f5f3ff;
-  font-family: inherit;
+.study-schedule-form label {
+  margin-top: 6px;
   font-size: 14px;
-  color-scheme: dark;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  font-weight: 600;
+  color: #374151;
 }
 
-.sr-form input:focus,
-.sr-form select:focus {
-  border-color: #a78bfa;
-  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+.study-schedule-form input:not([type="checkbox"]),
+.study-schedule-form select {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  color: #111827;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font: inherit;
 }
 
-.sr-checkbox {
+.study-schedule-form input:focus,
+.study-schedule-form select:focus {
+  outline: 2px solid #a5b4fc;
+  border-color: #6366f1;
+}
+
+.study-schedule-form .study-repeat-label {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin: 10px 0;
-  color: #d5d1e7;
-  font-size: 13px;
-  cursor: pointer;
+  margin: 12px 0;
 }
 
-.sr-checkbox input {
+.study-repeat-label input {
   width: 17px;
   height: 17px;
-  accent-color: #8b5cf6;
-  cursor: pointer;
 }
 
-.sr-primary-button,
-.sr-secondary-button,
-.sr-reset-button,
-.sr-delete-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 11px 16px;
-  border-radius: 10px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease;
-}
-
-.sr-primary-button {
-  border: 1px solid transparent;
-  background: linear-gradient(110deg, #8b5cf6, #6d4aff);
-  color: #fff;
-}
-
-.sr-primary-button:hover {
-  transform: translateY(-1px);
-  background: linear-gradient(110deg, #9a70ff, #795cff);
-}
-
-.sr-secondary-button {
-  width: 100%;
-  margin-top: 12px;
-  border: 1px solid rgba(167, 139, 250, 0.3);
-  background: rgba(139, 92, 246, 0.1);
-  color: #ddd6fe;
-}
-
-.sr-secondary-button:hover {
-  background: rgba(139, 92, 246, 0.2);
-}
-
-.sr-small-note {
-  margin: 10px 0 0;
-  color: #85819f;
-  font-size: 11px;
-  line-height: 1.6;
-}
-
-.sr-timer-card {
+.study-form-actions,
+.study-schedule-actions,
+.study-timer-actions {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
 }
 
-.sr-timer-circle {
-  display: grid;
-  place-items: center;
-  width: min(100%, 245px);
-  aspect-ratio: 1;
-  margin: 0 auto 24px;
-  padding: 12px;
-  border: 2px solid rgba(167, 139, 250, 0.65);
-  border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(139, 92, 246, 0.17),
-    rgba(18, 17, 34, 0.95) 70%
-  );
-  box-shadow:
-    0 0 0 8px rgba(139, 92, 246, 0.06),
-    0 0 35px rgba(139, 92, 246, 0.1);
-}
-
-.sr-timer-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  text-align: center;
-}
-
-.sr-timer-label {
-  color: #a78bfa;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 2px;
-}
-
-.sr-timer-inner strong {
+.study-schedule-details p {
   margin: 12px 0;
-  color: #fff;
-  font-size: clamp(28px, 4vw, 40px);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 1px;
-}
-
-.sr-timer-subtitle {
-  color: #a5a2bc;
-  font-size: 11px;
-}
-
-.sr-progress-track {
-  width: 100%;
-  height: 8px;
-  overflow: hidden;
-  border-radius: 20px;
-  background: rgba(167, 139, 250, 0.13);
-}
-
-.sr-progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, #8b5cf6, #c4b5fd);
-  transition: width 0.3s ease;
-}
-
-.sr-timer-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 20px;
-}
-
-.sr-timer-actions .sr-primary-button,
-.sr-timer-actions .sr-secondary-button,
-.sr-timer-actions .sr-reset-button {
-  width: 100%;
-  margin: 0;
-}
-
-.sr-reset-button {
-  border: 1px solid rgba(167, 139, 250, 0.25);
-  background: transparent;
-  color: #c4b5fd;
-}
-
-.sr-reset-button:hover {
-  background: rgba(139, 92, 246, 0.1);
-}
-
-.sr-focus-tip {
-  margin: 20px 0 0;
-  color: #a5a2bc;
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.sr-schedule-card {
-  margin-top: 20px;
-}
-
-.sr-schedule-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 22px;
-}
-
-.sr-schedule-header h3 {
-  margin: 0;
-  color: #fff;
-  font-size: 19px;
-}
-
-.sr-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 11px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: 30px;
-  background: rgba(148, 163, 184, 0.08);
-  color: #a5a2bc;
-  font-size: 11px;
-  white-space: nowrap;
-}
-
-.sr-status-active {
-  border-color: rgba(52, 211, 153, 0.25);
-  background: rgba(52, 211, 153, 0.08);
-  color: #6ee7b7;
-}
-
-.sr-schedule-details {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.sr-detail-item {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  padding: 15px;
-  border: 1px solid rgba(167, 139, 250, 0.12);
-  border-radius: 12px;
-  background: rgba(139, 92, 246, 0.05);
-}
-
-.sr-detail-item span {
-  color: #a5a2bc;
-  font-size: 12px;
-}
-
-.sr-detail-item strong {
   overflow-wrap: anywhere;
-  color: #f5f3ff;
-  font-size: 13px;
 }
 
-.sr-countdown {
-  margin-top: 18px;
-  padding: 13px 15px;
-  border: 1px solid rgba(167, 139, 250, 0.18);
+.study-topic-badge {
+  display: inline-block;
+  max-width: 100%;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  color: #4338ca;
+  background: #eef2ff;
   border-radius: 10px;
-  background: rgba(139, 92, 246, 0.08);
-  color: #ddd6fe;
-  font-size: 13px;
-  line-height: 1.6;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
-.sr-tomorrow-button {
-  margin-top: 14px;
-}
-
-.sr-schedule-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  margin-top: 18px;
-}
-
-.sr-schedule-footer p {
-  margin: 0;
-  color: #a5a2bc;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.sr-delete-button {
-  flex-shrink: 0;
-  border: 1px solid rgba(248, 113, 113, 0.25);
-  background: rgba(248, 113, 113, 0.08);
-  color: #fca5a5;
-}
-
-.sr-delete-button:hover {
-  background: rgba(248, 113, 113, 0.16);
-}
-
-.sr-empty-state {
+.study-countdown {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 28px 12px;
+  gap: 8px;
+  margin-top: 22px;
+  padding: 18px;
   text-align: center;
+  background: #f5f3ff;
+  border-radius: 12px;
 }
 
-.sr-empty-state > span {
-  margin-bottom: 12px;
-  font-size: 32px;
-}
-
-.sr-empty-state p {
-  margin: 0 0 8px;
-  color: #e9e5ff;
+.study-countdown span {
+  color: #6b7280;
   font-size: 14px;
-  font-weight: 600;
 }
 
-.sr-empty-state small {
-  color: #a5a2bc;
-  font-size: 12px;
-  line-height: 1.6;
+.study-countdown strong {
+  color: #4f46e5;
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
 }
 
-@media (max-width: 850px) {
-  .sr-grid {
+.study-empty-state {
+  padding: 25px 10px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.study-empty-state span {
+  font-size: 36px;
+}
+
+.study-empty-state p {
+  margin: 8px 0;
+}
+
+.study-timer-card {
+  grid-column: 1 / -1;
+}
+
+.study-timer-description {
+  color: #6b7280;
+}
+
+.study-timer-display {
+  margin: 20px 0;
+  text-align: center;
+  color: #4f46e5;
+  font-size: clamp(36px, 6vw, 54px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.study-progress-track {
+  height: 10px;
+  overflow: hidden;
+  background: #e5e7eb;
+  border-radius: 20px;
+}
+
+.study-progress-fill {
+  height: 100%;
+  background: #4f46e5;
+  border-radius: 20px;
+  transition: width 0.3s linear;
+}
+
+.study-timer-actions {
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .study-reminder {
+    padding: 14px;
+  }
+
+  .study-reminder-grid {
     grid-template-columns: 1fr;
   }
 
-  .sr-schedule-details {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 520px) {
-  .sr-heading {
-    align-items: flex-start;
+  .study-timer-card {
+    grid-column: auto;
   }
 
-  .sr-heading-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
+  .study-card {
+    padding: 18px;
+  }
+
+  .study-reminder-header h2 {
     font-size: 23px;
-  }
-
-  .sr-card,
-  .sr-schedule-card {
-    padding: 17px;
-    border-radius: 16px;
-  }
-
-  .sr-schedule-header {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .sr-schedule-footer {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .sr-delete-button {
-    width: 100%;
-  }
-
-  .sr-timer-actions {
-    grid-template-columns: 1fr;
   }
 }

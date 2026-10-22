@@ -1,143 +1,105 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import "./studyReminder.css";
 
-const STORAGE_KEY = "nexora_study_schedule";
-const NOTIFIED_KEY = "nexora_study_notified_events";
+import {
+fetchStudySchedules,
+createStudySchedule,
+updateStudySchedule,
+deleteStudySchedule,
+} from "../api/studyScheduleApi";
 
 function getToday() {
-const d = new Date();
-return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const now = new Date();
+const year = now.getFullYear();
+const month = String(now.getMonth() + 1).padStart(2, "0");
+const day = String(now.getDate()).padStart(2, "0");
+
+return `${year}-${month}-${day}`;
 }
 
-function getTomorrow(dateString) {
-const d = new Date(`${dateString}T12:00:00`);
-d.setDate(d.getDate() + 1);
-return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function getDefaultTime() {
-const d = new Date();
-d.setMinutes(d.getMinutes() + 15);
-return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function readJSON(key, fallback) {
-try {
-const value = localStorage.getItem(key);
-return value ? JSON.parse(value) : fallback;
-} catch {
-return fallback;
-}
-}
-
-function formatTime(seconds) {
-const h = Math.floor(seconds / 3600);
-const m = Math.floor((seconds % 3600) / 60);
-const s = seconds % 60;
-
-return [h, m, s]
-.map((n) => String(n).padStart(2, "0"))
-.join(":");
-}
-
-function formatDateTime(date, time) {
-return new Date(`${date}T${time}:00`).toLocaleString([], {
-weekday: "short",
-day: "numeric",
-month: "short",
-hour: "2-digit",
-minute: "2-digit",
-});
-}
-
-function getTimestamp(date, time) {
-return new Date(`${date}T${time}:00`).getTime();
-}
-
-function StudyReminder() {
-const savedSchedule = readJSON(STORAGE_KEY, null);
-
-const [schedule, setSchedule] = useState(savedSchedule);
-
-const [studyDate, setStudyDate] = useState(
-savedSchedule?.date || getToday()
-);
-
-const [studyTime, setStudyTime] = useState(
-savedSchedule?.time || getDefaultTime()
-);
-
-const [duration, setDuration] = useState(
-Number(savedSchedule?.duration) || 60
-);
-
-const [topic, setTopic] = useState(
-savedSchedule?.topic || "Study Session"
-);
-
-const [repeatDaily, setRepeatDaily] = useState(
-Boolean(savedSchedule?.repeatDaily)
-);
-
-const [remainingSeconds, setRemainingSeconds] = useState(
-(Number(savedSchedule?.duration) || 60) * 60
-);
-
-const [timerStatus, setTimerStatus] = useState("idle");
-const [message, setMessage] = useState("");
-const [now, setNow] = useState(Date.now());
-
-const [notificationPermission, setNotificationPermission] = useState(() => {
-if (typeof window === "undefined" || !("Notification" in window)) {
-return "unsupported";
-}
-
-return Notification.permission;
-
-
-});
-
-const notifiedEvents = useRef(
-new Set(readJSON(NOTIFIED_KEY, []))
-);
-
-const messageTimeout = useRef(null);
-const timerRef = useRef(null);
-
-useEffect(() => {
-if (schedule) {
-localStorage.setItem(STORAGE_KEY, JSON.stringify(schedule));
-} else {
-localStorage.removeItem(STORAGE_KEY);
-}
-}, [schedule]);
-
-useEffect(() => {
-localStorage.setItem(
-NOTIFIED_KEY,
-JSON.stringify([...notifiedEvents.current])
-);
-}, [now, schedule]);
-
-useEffect(() => {
-const interval = window.setInterval(() => {
-setNow(Date.now());
-}, 1000);
-
-
-const onFocus = () => setNow(Date.now());
-
-window.addEventListener("focus", onFocus);
-
-return () => {
-  window.clearInterval(interval);
-  window.removeEventListener("focus", onFocus);
+function getDefaultForm() {
+return {
+date: getToday(),
+time: "20:00",
+topic: "",
+durationMinutes: 60,
+repeatDaily: false,
 };
+}
 
+function normalizeTime(time) {
+if (typeof time === "string" && time.length >= 5) {
+return time.slice(0, 5);
+}
 
-}, []);
+return "20:00";
+}
 
-function showMessage(text) {
+function normalizeSchedule(item) {
+return {
+...item,
+id: item.id ?? item._id,
+date: item.date || getToday(),
+time: normalizeTime(item.time),
+topic: item.topic || "",
+durationMinutes: Number(item.duration ?? item.durationMinutes ?? 60),
+repeatDaily: Boolean(item.repeatDaily),
+};
+}
+
+function getTargetDate(schedule, currentTime) {
+if (!schedule?.date || !schedule?.time) {
+return null;
+}
+
+const target = new Date(
+`${schedule.date}T${normalizeTime(schedule.time)}:00`
+);
+
+if (Number.isNaN(target.getTime())) {
+return null;
+}
+
+if (schedule.repeatDaily && target.getTime() <= currentTime) {
+target.setDate(target.getDate() + 1);
+}
+
+return target;
+}
+
+function formatCountdown(totalSeconds) {
+const seconds = Math.max(0, Math.floor(totalSeconds));
+const hours = Math.floor(seconds / 3600);
+const minutes = Math.floor((seconds % 3600) / 60);
+const remainingSeconds = seconds % 60;
+
+return [
+String(hours).padStart(2, "0"),
+String(minutes).padStart(2, "0"),
+String(remainingSeconds).padStart(2, "0"),
+].join(":");
+}
+
+export default function StudyReminder() {
+const [schedule, setSchedule] = useState(null);
+const [form, setForm] = useState(getDefaultForm);
+
+const [loading, setLoading] = useState(true);
+const [saving, setSaving] = useState(false);
+const [editing, setEditing] = useState(false);
+
+const [error, setError] = useState("");
+const [message, setMessage] = useState("");
+
+const [now, setNow] = useState(Date.now());
+const [timerRunning, setTimerRunning] = useState(false);
+const [timerSeconds, setTimerSeconds] = useState(0);
+const [timerTotalSeconds, setTimerTotalSeconds] = useState(0);
+
+const notifiedEvents = useRef(new Set());
+const messageTimeout = useRef(null);
+
+const showMessage = useCallback((text) => {
 setMessage(text);
 
 
@@ -147,169 +109,167 @@ if (messageTimeout.current) {
 
 messageTimeout.current = window.setTimeout(() => {
   setMessage("");
-}, 6000);
+}, 3500);
 
 
-}
+}, []);
 
 useEffect(() => {
 return () => {
 if (messageTimeout.current) {
 window.clearTimeout(messageTimeout.current);
 }
-
-
-  if (timerRef.current) {
-    window.clearInterval(timerRef.current);
-  }
 };
+}, []);
+
+const loadSchedules = useCallback(async () => {
+setLoading(true);
+setError("");
+
+
+try {
+  const result = await fetchStudySchedules();
+
+  const schedules = Array.isArray(result)
+    ? result
+    : result
+      ? [result]
+      : [];
+
+  if (schedules.length > 0) {
+    const normalized = normalizeSchedule(schedules[0]);
+
+    setSchedule(normalized);
+
+    setForm({
+      date: normalized.date,
+      time: normalized.time,
+      topic: normalized.topic,
+      durationMinutes: normalized.durationMinutes,
+      repeatDaily: normalized.repeatDaily,
+    });
+  } else {
+    setSchedule(null);
+  }
+} catch (err) {
+  console.error("Load schedules error:", err);
+  setError(err.message || "Could not load your study schedule.");
+} finally {
+  setLoading(false);
+}
 
 
 }, []);
 
-function sendNotification(title, body) {
-if (!("Notification" in window)) {
-showMessage("Your browser does not support notifications.");
-return false;
-}
-
-
-if (Notification.permission !== "granted") {
-  showMessage("Please enable notifications first.");
-  return false;
-}
-
-try {
-  const notification = new Notification(title, {
-    body,
-    icon: "/favicon.ico",
-  });
-
-  notification.onclick = () => {
-    window.focus();
-    notification.close();
-  };
-
-  return true;
-} catch (error) {
-  console.error("Notification error:", error);
-  showMessage("Could not show notification. Check browser settings.");
-  return false;
-}
-
-
-}
-
-async function enableNotifications() {
-if (!("Notification" in window)) {
-setNotificationPermission("unsupported");
-showMessage("Your browser does not support desktop notifications.");
-return;
-}
-
-
-try {
-  const permission = await Notification.requestPermission();
-
-  setNotificationPermission(permission);
-
-  if (permission === "granted") {
-    showMessage("🔔 Notifications enabled!");
-
-    sendNotification(
-      "NEXORA Notifications Enabled",
-      "Your study reminders are ready."
-    );
-  } else {
-    showMessage(
-      "Notifications were not allowed. Check your browser site settings."
-    );
-  }
-} catch (error) {
-  console.error(error);
-  showMessage("Unable to request notification permission.");
-}
-
-}
+useEffect(() => {
+loadSchedules();
+}, [loadSchedules]);
 
 useEffect(() => {
-if (!schedule?.date || !schedule?.time) {
+const intervalId = window.setInterval(() => {
+setNow(Date.now());
+}, 1000);
+
+
+return () => window.clearInterval(intervalId);
+
+
+}, []);
+
+// Study schedule notifications.
+useEffect(() => {
+if (!schedule) {
 return;
 }
 
 
-const scheduledAt = getTimestamp(schedule.date, schedule.time);
+const target = getTargetDate(schedule, now);
 
-if (!Number.isFinite(scheduledAt)) {
+if (!target) {
   return;
 }
 
-const scheduleId = schedule.id || `${schedule.date}-${schedule.time}`;
-const advanceKey = `${scheduleId}-${schedule.date}-advance`;
-const startKey = `${scheduleId}-${schedule.date}-start`;
+const targetTime = target.getTime();
+const secondsLeft = Math.floor((targetTime - now) / 1000);
+const eventKey = `${schedule.id ?? "schedule"}-${targetTime}`;
 
-const difference = scheduledAt - now;
+if (secondsLeft <= 600 && secondsLeft > 0) {
+  const reminderKey = `${eventKey}-soon`;
 
-if (
-  difference > 0 &&
-  difference <= 10 * 60 * 1000 &&
-  !notifiedEvents.current.has(advanceKey)
-) {
-  notifiedEvents.current.add(advanceKey);
+  if (!notifiedEvents.current.has(reminderKey)) {
+    notifiedEvents.current.add(reminderKey);
 
-  sendNotification(
-    "NEXORA — Get Ready! 📚",
-    `"${schedule.topic}" starts in ${Math.max(1, Math.ceil(difference / 60000))} minute(s).`
-  );
+    showMessage(
+      `Your study session "${schedule.topic}" starts in 10 minutes or less.`
+    );
+
+    if (
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      try {
+        new Notification("Nexora Study Reminder", {
+          body: `${schedule.topic} starts soon!`,
+        });
+      } catch (err) {
+        console.error("Notification error:", err);
+      }
+    }
+  }
 }
 
-if (
-  now >= scheduledAt &&
-  !notifiedEvents.current.has(startKey)
-) {
-  notifiedEvents.current.add(startKey);
+if (secondsLeft <= 0) {
+  const startKey = `${eventKey}-start`;
 
-  sendNotification(
-    "NEXORA — It's Study Time! 🚀",
-    `It's time to study "${schedule.topic}". Planned duration: ${schedule.duration} minutes.`
-  );
+  if (!notifiedEvents.current.has(startKey)) {
+    notifiedEvents.current.add(startKey);
 
-  showMessage(`📚 It's time to study "${schedule.topic}"!`);
+    showMessage(`It's time to study: ${schedule.topic}`);
 
-  if (schedule.repeatDaily) {
-    const nextSchedule = {
-      ...schedule,
-      date: getTomorrow(schedule.date),
-    };
-
-    setSchedule(nextSchedule);
-    setStudyDate(nextSchedule.date);
+    if (
+      "Notification" in window &&
+      Notification.permission === "granted"
+    ) {
+      try {
+        new Notification("Nexora Study Reminder", {
+          body: `Time to study ${schedule.topic}!`,
+        });
+      } catch (err) {
+        console.error("Notification error:", err);
+      }
+    }
   }
 }
 
 
-}, [now, schedule]);
+}, [schedule, now, showMessage]);
 
+// Study timer.
 useEffect(() => {
-if (timerStatus !== "running") {
-return;
+if (!timerRunning) {
+return undefined;
 }
 
 
-timerRef.current = window.setInterval(() => {
-  setRemainingSeconds((previous) => {
+const intervalId = window.setInterval(() => {
+  setTimerSeconds((previous) => {
     if (previous <= 1) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
+      setTimerRunning(false);
 
-      setTimerStatus("completed");
+      showMessage("Study timer completed. Great work!");
 
-      sendNotification(
-        "NEXORA — Session Completed! 🎉",
-        "Great work! Your study session is complete."
-      );
-
-      showMessage("🎉 Study session completed!");
+      if (
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        try {
+          new Notification("Nexora", {
+            body: "Your study timer has finished!",
+          });
+        } catch (err) {
+          console.error("Notification error:", err);
+        }
+      }
 
       return 0;
     }
@@ -318,193 +278,281 @@ timerRef.current = window.setInterval(() => {
   });
 }, 1000);
 
-return () => {
-  if (timerRef.current) {
-    window.clearInterval(timerRef.current);
-    timerRef.current = null;
-  }
-};
+return () => window.clearInterval(intervalId);
 
-}, [timerStatus]);
 
-function handleSaveSchedule(event) {
-event.preventDefault();
+}, [timerRunning, showMessage]);
 
-if (!topic.trim() || !studyDate || !studyTime) {
-  showMessage("Please enter the topic, date and time.");
-  return;
-}
+function handleChange(event) {
+const { name, value, checked, type } = event.target;
 
-const scheduledAt = getTimestamp(studyDate, studyTime);
 
-if (!Number.isFinite(scheduledAt) || scheduledAt <= Date.now()) {
-  showMessage("Please choose a valid future date and time.");
-  return;
-}
+setForm((previous) => ({
+  ...previous,
+  [name]:
+    type === "checkbox"
+      ? checked
+      : name === "durationMinutes"
+        ? Number(value)
+        : value,
+}));
 
-const newSchedule = {
-  id:
-    typeof crypto !== "undefined" && crypto.randomUUID
-      ? crypto.randomUUID()
-      : String(Date.now()),
-  topic: topic.trim(),
-  date: studyDate,
-  time: studyTime,
-  duration: Number(duration),
-  repeatDaily,
-};
-
-notifiedEvents.current.clear();
-localStorage.setItem(NOTIFIED_KEY, JSON.stringify([]));
-
-setSchedule(newSchedule);
-setRemainingSeconds(Number(duration) * 60);
-setTimerStatus("idle");
-
-showMessage(
-  `Schedule saved for ${formatDateTime(newSchedule.date, newSchedule.time)}.`
-);
-
-if (notificationPermission === "granted") {
-  sendNotification(
-    "NEXORA — Schedule Saved",
-    `"${newSchedule.topic}" is scheduled for ${formatDateTime(newSchedule.date, newSchedule.time)}.`
-  );
-} else {
-  showMessage(
-    "Schedule saved. Enable notifications to receive popup alerts."
-  );
-}
 
 }
 
-function handleStart() {
-if (timerStatus === "running") {
+async function handleNotificationPermission() {
+if (!("Notification" in window)) {
+showMessage("Your browser does not support notifications.");
 return;
 }
 
 
-if (remainingSeconds <= 0) {
-  setRemainingSeconds(Number(duration) * 60);
+try {
+  const permission = await Notification.requestPermission();
+
+  if (permission === "granted") {
+    showMessage("Browser notifications enabled!");
+  } else {
+    showMessage("Notification permission was not granted.");
+  }
+} catch (err) {
+  console.error("Notification permission error:", err);
+  showMessage("Could not enable notifications.");
 }
 
-setTimerStatus("running");
-showMessage(`📚 Focus mode started: "${topic}".`);
-
-}
-
-function handlePause() {
-setTimerStatus("paused");
-showMessage("Study timer paused.");
-}
-
-function handleReset() {
-setTimerStatus("idle");
-setRemainingSeconds(Number(duration) * 60);
-showMessage("Timer reset.");
-}
-
-function handleDeleteSchedule() {
-setSchedule(null);
-setTimerStatus("idle");
-setRemainingSeconds(Number(duration) * 60);
-notifiedEvents.current.clear();
-
-
-localStorage.removeItem(NOTIFIED_KEY);
-
-setStudyDate(getToday());
-setStudyTime(getDefaultTime());
-
-showMessage("Study schedule removed.");
 
 }
 
-const totalSeconds = Number(duration) * 60;
+async function handleSave(event) {
+event.preventDefault();
 
-const progress =
-totalSeconds > 0
-? ((totalSeconds - remainingSeconds) / totalSeconds) * 100
+
+setError("");
+setMessage("");
+
+if (!form.topic.trim()) {
+  setError("Please enter a study topic.");
+  return;
+}
+
+if (!form.date || !form.time) {
+  setError("Please select the study date and time.");
+  return;
+}
+
+const selectedDateTime = new Date(`${form.date}T${form.time}:00`);
+
+if (Number.isNaN(selectedDateTime.getTime())) {
+  setError("Please enter a valid date and time.");
+  return;
+}
+
+if (
+  !form.repeatDaily &&
+  selectedDateTime.getTime() <= Date.now()
+) {
+  setError("Please select a future date and time.");
+  return;
+}
+
+const duration = Number(form.durationMinutes);
+
+if (
+  !Number.isInteger(duration) ||
+  duration < 1 ||
+  duration > 480
+) {
+  setError("Duration must be between 1 and 480 minutes.");
+  return;
+}
+
+// The backend entity uses "duration".
+const payload = {
+  topic: form.topic.trim(),
+  date: form.date,
+  time: form.time,
+  duration,
+  repeatDaily: Boolean(form.repeatDaily),
+};
+
+setSaving(true);
+
+try {
+  let result;
+
+  if (editing && schedule?.id != null) {
+    result = await updateStudySchedule(schedule.id, payload);
+  } else {
+    result = await createStudySchedule(payload);
+  }
+
+  if (result) {
+    setSchedule(normalizeSchedule(result));
+  } else {
+    await loadSchedules();
+  }
+
+  setEditing(false);
+  notifiedEvents.current.clear();
+
+  showMessage(
+    editing
+      ? "Study schedule updated successfully!"
+      : "Study schedule saved successfully!"
+  );
+} catch (err) {
+  console.error("Save schedule error:", err);
+  setError(err.message || "Could not save the study schedule.");
+} finally {
+  setSaving(false);
+}
+
+
+}
+
+function handleEdit() {
+if (!schedule) {
+return;
+}
+
+
+setForm({
+  date: schedule.date,
+  time: schedule.time,
+  topic: schedule.topic,
+  durationMinutes: schedule.durationMinutes,
+  repeatDaily: schedule.repeatDaily,
+});
+
+setEditing(true);
+setError("");
+setMessage("");
+
+
+}
+
+async function handleDelete() {
+if (!schedule || schedule.id == null) {
+setError("Schedule ID is missing. Please refresh the page.");
+return;
+}
+
+
+if (!window.confirm("Delete this study schedule?")) {
+  return;
+}
+
+setError("");
+
+try {
+  await deleteStudySchedule(schedule.id);
+
+  setSchedule(null);
+  setForm(getDefaultForm());
+  setEditing(false);
+  notifiedEvents.current.clear();
+
+  showMessage("Study schedule deleted successfully!");
+} catch (err) {
+  console.error("Delete schedule error:", err);
+  setError(err.message || "Could not delete the study schedule.");
+}
+
+}
+
+function handleStartTimer() {
+const seconds = Number(form.durationMinutes) * 60;
+
+
+setTimerSeconds(seconds);
+setTimerTotalSeconds(seconds);
+setTimerRunning(true);
+
+
+}
+
+function handleResetTimer() {
+setTimerRunning(false);
+setTimerSeconds(timerTotalSeconds);
+}
+
+const targetDate = schedule ? getTargetDate(schedule, now) : null;
+
+const countdownSeconds = targetDate
+? Math.max(0, Math.floor((targetDate.getTime() - now) / 1000))
 : 0;
 
-const scheduledAt = schedule
-? getTimestamp(schedule.date, schedule.time)
-: null;
-
-const upcoming = scheduledAt !== null && scheduledAt > now;
-
-const minutesUntilStart = upcoming
-? Math.ceil((scheduledAt - now) / 60000)
+const timerProgress =
+timerTotalSeconds > 0
+? ((timerTotalSeconds - timerSeconds) / timerTotalSeconds) * 100
 : 0;
 
-return ( <section className="study-reminder"> <header className="sr-heading"> <div> <span className="sr-eyebrow">FOCUS. LEARN. LEVEL UP.</span> <h2>Study Timer & Reminders</h2> <p>Schedule a session and get notified at the selected time.</p> </div>
+return ( <section className="study-reminder"> <div className="study-reminder-header"> <div> <h2>📚 Study Reminder</h2> <p>Plan your study sessions and stay consistent.</p> </div>
 
 
-    <div className="sr-heading-icon" aria-hidden="true">
-      📚
-    </div>
-  </header>
+    <button
+      type="button"
+      className="study-notification-button"
+      onClick={handleNotificationPermission}
+    >
+      🔔 Enable Notifications
+    </button>
+  </div>
 
   {message && (
-    <div className="sr-message" role="status">
+    <div className="study-success-message" role="status">
       {message}
     </div>
   )}
 
-  <div className="sr-grid">
-    <article className="sr-card">
-      <div className="sr-card-heading">
-        <span className="sr-card-icon">📅</span>
-        <div>
-          <h3>Plan Your Study</h3>
-          <p>Choose your topic, date, time and duration.</p>
-        </div>
-      </div>
+  {error && (
+    <div className="study-error-message" role="alert">
+      <strong>Error:</strong> {error}
+    </div>
+  )}
 
-      <form className="sr-form" onSubmit={handleSaveSchedule}>
-        <label htmlFor="sr-topic">Study topic</label>
+  <div className="study-reminder-grid">
+    <div className="study-card">
+      <h3>{editing ? "Edit Study Schedule" : "Create Study Schedule"}</h3>
+
+      <form className="study-schedule-form" onSubmit={handleSave}>
+        <label htmlFor="study-topic">Study Topic</label>
         <input
-          id="sr-topic"
+          id="study-topic"
+          name="topic"
           type="text"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="e.g. Java Programming"
-          maxLength={100}
+          placeholder="e.g. Java, Spring Boot, SQL"
+          value={form.topic}
+          onChange={handleChange}
           required
         />
 
-        <label htmlFor="sr-date">Study date</label>
+        <label htmlFor="study-date">Study Date</label>
         <input
-          id="sr-date"
+          id="study-date"
+          name="date"
           type="date"
-          min={getToday()}
-          value={studyDate}
-          onChange={(e) => setStudyDate(e.target.value)}
+          value={form.date}
+          onChange={handleChange}
           required
         />
 
-        <label htmlFor="sr-time">Start time</label>
+        <label htmlFor="study-time">Study Time</label>
         <input
-          id="sr-time"
+          id="study-time"
+          name="time"
           type="time"
-          value={studyTime}
-          onChange={(e) => setStudyTime(e.target.value)}
+          value={form.time}
+          onChange={handleChange}
           required
         />
 
-        <label htmlFor="sr-duration">Study duration</label>
+        <label htmlFor="study-duration">Duration</label>
         <select
-          id="sr-duration"
-          value={duration}
-          onChange={(e) => {
-            const value = Number(e.target.value);
-            setDuration(value);
-
-            if (timerStatus !== "running") {
-              setRemainingSeconds(value * 60);
-              setTimerStatus("idle");
-            }
-          }}
+          id="study-duration"
+          name="durationMinutes"
+          value={form.durationMinutes}
+          onChange={handleChange}
         >
           <option value={25}>25 minutes</option>
           <option value={30}>30 minutes</option>
@@ -514,191 +562,172 @@ return ( <section className="study-reminder"> <header className="sr-heading"> <d
           <option value={120}>2 hours</option>
         </select>
 
-        <label className="sr-checkbox">
+        <label className="study-repeat-label">
           <input
             type="checkbox"
-            checked={repeatDaily}
-            onChange={(e) => setRepeatDaily(e.target.checked)}
+            name="repeatDaily"
+            checked={form.repeatDaily}
+            onChange={handleChange}
           />
-          <span>Repeat every day</span>
+          Repeat every day
         </label>
 
-        <button type="submit" className="sr-primary-button">
-          💾 Save Schedule
-        </button>
+        <div className="study-form-actions">
+          <button type="submit" disabled={saving}>
+            {saving
+              ? "Saving..."
+              : editing
+                ? "Update Schedule"
+                : "Save Schedule"}
+          </button>
+
+          {editing && (
+            <button
+              type="button"
+              className="study-secondary-button"
+              onClick={() => {
+                setEditing(false);
+
+                setForm(
+                  schedule
+                    ? {
+                        date: schedule.date,
+                        time: schedule.time,
+                        topic: schedule.topic,
+                        durationMinutes: schedule.durationMinutes,
+                        repeatDaily: schedule.repeatDaily,
+                      }
+                    : getDefaultForm()
+                );
+
+                setError("");
+              }}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
+    </div>
+
+    <div className="study-card">
+      <h3>⏰ Your Schedule</h3>
+
+      {loading ? (
+        <p>Loading your study schedule...</p>
+      ) : schedule ? (
+        <div className="study-schedule-details">
+          <div className="study-topic-badge">📖 {schedule.topic}</div>
+
+          <p>
+            <strong>Date:</strong> {schedule.date}
+          </p>
+
+          <p>
+            <strong>Time:</strong> {schedule.time}
+          </p>
+
+          <p>
+            <strong>Duration:</strong> {schedule.durationMinutes} minutes
+          </p>
+
+          <p>
+            <strong>Repeat:</strong>{" "}
+            {schedule.repeatDaily ? "Daily" : "One time"}
+          </p>
+
+          <div className="study-countdown">
+            <span>Next study session in</span>
+            <strong>{formatCountdown(countdownSeconds)}</strong>
+          </div>
+
+          <div className="study-schedule-actions">
+            <button type="button" onClick={handleEdit}>
+              ✏️ Edit
+            </button>
+
+            <button
+              type="button"
+              className="study-delete-button"
+              onClick={handleDelete}
+            >
+              🗑️ Delete
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="study-empty-state">
+          <span>🗓️</span>
+          <p>No study schedule found.</p>
+          <p>Create a schedule to get started.</p>
+        </div>
+      )}
 
       <button
         type="button"
-        className="sr-secondary-button"
-        onClick={enableNotifications}
-        disabled={notificationPermission === "unsupported"}
+        className="study-refresh-button"
+        onClick={loadSchedules}
+        disabled={loading}
       >
-        🔔{" "}
-        {notificationPermission === "granted"
-          ? "Notifications Enabled"
-          : notificationPermission === "denied"
-            ? "Notifications Blocked"
-            : "Enable Notifications"}
+        ↻ Refresh Schedule
       </button>
+    </div>
 
-      <p className="sr-small-note">
-        Keep NEXORA open to receive scheduled reminders.
+    <div className="study-card study-timer-card">
+      <h3>⏱️ Study Timer</h3>
+      <p className="study-timer-description">
+        Focus on your current topic without distractions.
       </p>
-    </article>
 
-    <article className="sr-card sr-timer-card">
-      <div className="sr-card-heading">
-        <span className="sr-card-icon">⏱️</span>
-        <div>
-          <h3>Focus Timer</h3>
-          <p>Start focusing on your goal.</p>
-        </div>
+      <div className="study-timer-display">
+        {formatCountdown(timerSeconds)}
       </div>
 
-      <div className="sr-timer-circle">
-        <div className="sr-timer-inner">
-          <span className="sr-timer-label">
-            {timerStatus === "running"
-              ? "FOCUSING"
-              : timerStatus === "paused"
-                ? "PAUSED"
-                : timerStatus === "completed"
-                  ? "COMPLETED"
-                  : "READY"}
-          </span>
-
-          <strong>{formatTime(remainingSeconds)}</strong>
-
-          <span className="sr-timer-subtitle">
-            {duration} minute session
-          </span>
-        </div>
-      </div>
-
-      <div
-        className="sr-progress-track"
-        role="progressbar"
-        aria-valuenow={Math.round(progress)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label="Study session progress"
-      >
+      <div className="study-progress-track">
         <div
-          className="sr-progress-fill"
-          style={{ width: `${Math.min(100, progress)}%` }}
+          className="study-progress-fill"
+          style={{ width: `${timerProgress}%` }}
         />
       </div>
 
-      <div className="sr-timer-actions">
-        {timerStatus === "running" ? (
-          <button
-            type="button"
-            className="sr-secondary-button"
-            onClick={handlePause}
-          >
-            ⏸ Pause
-          </button>
-        ) : (
-          <button
-            type="button"
-            className="sr-primary-button"
-            onClick={handleStart}
-          >
-            ▶ {timerStatus === "paused" ? "Resume" : "Start Studying"}
+      <div className="study-timer-actions">
+        {!timerRunning && timerSeconds === 0 && (
+          <button type="button" onClick={handleStartTimer}>
+            ▶ Start Timer
           </button>
         )}
 
-        <button
-          type="button"
-          className="sr-reset-button"
-          onClick={handleReset}
-        >
-          ↻ Reset
-        </button>
-      </div>
-
-      <p className="sr-focus-tip">
-        ✨ Focus on one task at a time. Every session counts.
-      </p>
-    </article>
-  </div>
-
-  <article className="sr-schedule-card">
-    <div className="sr-schedule-header">
-      <div>
-        <span className="sr-eyebrow">YOUR PLAN</span>
-        <h3>Scheduled Session</h3>
-      </div>
-
-      <span className={`sr-status ${schedule ? "sr-status-active" : ""}`}>
-        {schedule ? "● Scheduled" : "○ Not scheduled"}
-      </span>
-    </div>
-
-    {schedule ? (
-      <>
-        <div className="sr-schedule-details">
-          <div className="sr-detail-item">
-            <span>📚 Topic</span>
-            <strong>{schedule.topic}</strong>
-          </div>
-
-          <div className="sr-detail-item">
-            <span>📅 Date</span>
-            <strong>{schedule.date}</strong>
-          </div>
-
-          <div className="sr-detail-item">
-            <span>🕒 Start time</span>
-            <strong>{schedule.time}</strong>
-          </div>
-
-          <div className="sr-detail-item">
-            <span>⏳ Duration</span>
-            <strong>{schedule.duration} minutes</strong>
-          </div>
-
-          <div className="sr-detail-item">
-            <span>🔁 Repeat</span>
-            <strong>{schedule.repeatDaily ? "Daily" : "Once"}</strong>
-          </div>
-        </div>
-
-        <div className="sr-countdown">
-          {upcoming
-            ? `⏰ Your session starts in ${minutesUntilStart} minute(s).`
-            : "📌 Your scheduled time has arrived or passed."}
-        </div>
-
-        <div className="sr-schedule-footer">
-          <p>
-            {notificationPermission === "granted"
-              ? "🔔 Browser notifications are enabled."
-              : "🔔 Enable browser notifications to receive alerts."}
-          </p>
-
+        {timerRunning && (
           <button
             type="button"
-            className="sr-delete-button"
-            onClick={handleDeleteSchedule}
+            onClick={() => setTimerRunning(false)}
           >
-            Remove Schedule
+            ⏸ Pause
           </button>
-        </div>
-      </>
-    ) : (
-      <div className="sr-empty-state">
-        <span>🗓️</span>
-        <p>No study session scheduled yet.</p>
-        <small>Set your date and time using the form above.</small>
-      </div>
-    )}
-  </article>
-</section>
+        )}
 
+        {!timerRunning && timerSeconds > 0 && (
+          <button
+            type="button"
+            onClick={() => setTimerRunning(true)}
+          >
+            ▶ Resume
+          </button>
+        )}
+
+        {timerTotalSeconds > 0 && (
+          <button
+            type="button"
+            className="study-secondary-button"
+            onClick={handleResetTimer}
+          >
+            ↻ Reset
+          </button>
+        )}
+      </div>
+    </div>
+  </div>
+</section>
 
 );
 }
-
-export default StudyReminder;
