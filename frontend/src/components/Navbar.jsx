@@ -5,20 +5,22 @@ export default function Navbar({ onLogout }) {
   const navigate = useNavigate();
 
   const handleLogout = () => {
+    // If App.jsx provides a logout function, use it.
     if (typeof onLogout === "function") {
       onLogout();
       return;
     }
 
-    // Fallback if Navbar is used outside App's Dashboard route
+    // Fallback logout
     localStorage.removeItem("nexora_token");
-    localStorage.removeItem("nexora_profile");
+    localStorage.removeItem("nexora_logged_in");
 
     navigate("/login", { replace: true });
   };
 
   return (
     <nav className="nx-navbar">
+      {/* Brand */}
       <div
         className="nx-navbar-brand"
         onClick={() => navigate("/dashboard")}
@@ -33,6 +35,7 @@ export default function Navbar({ onLogout }) {
         ✦ NEXORA
       </div>
 
+      {/* Navigation Links */}
       <div className="nx-navbar-links">
         <button
           type="button"
@@ -57,6 +60,7 @@ export default function Navbar({ onLogout }) {
 
         <button
           type="button"
+          className="nx-logout-btn"
           onClick={handleLogout}
         >
           Logout

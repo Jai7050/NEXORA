@@ -1,8 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import "./Dashboard.css";
+
+import StudyReminder from "../../components/studyReminder";
 import BonusChallenges from "../../components/BonusChallenges/BonusChallenges";
 import Navbar from "../../components/Navbar";
+
 import { getTotalXP, addXP, removeXP } from "../../utils/xpSystem";
+import { fetchGoals, toggleGoalTask } from "../../api/goalsApi";
 
 const STREAK_KEY = "nexora_streak";
 const LAST_COMPLETED_KEY = "nexora_last_completed_date";
@@ -95,12 +99,43 @@ function loadData(key, fallback) {
   }
 }
 
+function normalizeGoal(goal) {
+  return {
+    ...goal,
+    targetDays: Math.max(1, Number(goal.targetDays) || 1),
+    completedDays: Math.max(0, Number(goal.completedDays) || 0),
+    xp: Math.max(1, Number(goal.xp) || 10),
+    tasks: Array.isArray(goal.tasks)
+      ? goal.tasks.map((task, index) =>
+          typeof task === "string"
+            ? { id: `${goal.id}-task-${index}`, title: task }
+            : task
+        )
+      : [],
+    dailyCompletions:
+      goal.dailyCompletions &&
+      typeof goal.dailyCompletions === "object"
+        ? goal.dailyCompletions
+        : {},
+  };
+}
+
+function getTodayTasks(goal) {
+  return goal.dailyCompletions?.[getLocalDate()] || [];
+}
+
+function getGoalProgress(goal) {
+  return Math.min(
+    100,
+    Math.round(
+      (goal.completedDays / Math.max(1, goal.targetDays)) * 100
+    )
+  );
+}
+
 function Dashboard({ onLogout }) {
   const [profile] = useState(() =>
-    loadData(PROFILE_KEY, {
-      fullName: "",
-      email: "",
-    })
+    loadData(PROFILE_KEY, { fullName: "", email: "" })
   );
 
   const [missions, setMissions] = useState(() =>
@@ -110,6 +145,9 @@ function Dashboard({ onLogout }) {
   const [challenges, setChallenges] = useState(() =>
     loadData(CHALLENGES_KEY, defaultChallenges)
   );
+
+  const [goals, setGoals] = useState([]);
+  const [goalsLoading, setGoalsLoading] = useState(true);
 
   const [totalXP, setTotalXP] = useState(() => getTotalXP());
 
@@ -122,12 +160,12 @@ function Dashboard({ onLogout }) {
   );
 
   const [showLevelUp, setShowLevelUp] = useState(false);
+  const [notice, setNotice] = useState("");
+  const [goalError, setGoalError] = useState("");
 
   const previousLevel = useRef(
     Math.min(Math.floor(totalXP / 100) + 1, 10)
   );
-
-  const [notice, setNotice] = useState("");
 
   const completedMissions = missions.filter(
     (mission) => mission.completed
@@ -144,6 +182,10 @@ function Dashboard({ onLogout }) {
   const challengeProgress = challenges.length
     ? Math.round((completedChallenges / challenges.length) * 100)
     : 0;
+
+  const completedGoals = goals.filter(
+    (goal) => goal.completedDays >= goal.targetDays
+  ).length;
 
   const level = Math.min(Math.floor(totalXP / 100) + 1, 10);
 
@@ -168,7 +210,56 @@ function Dashboard({ onLogout }) {
     profile.email?.split("@")[0] ||
     "Player";
 
-  // Synchronize XP
+  function showNotice(message) {
+    setNotice(message);
+
+    window.setTimeout(() => {
+      setNotice((current) =>
+        current === message ? "" : current
+      );
+    }, 3000);
+  }
+
+  // Fetch the same goals created on the Goals page.
+  async function loadDashboardGoals() {
+    try {
+      setGoalsLoading(true);
+      setGoalError("");
+
+      const data = await fetchGoals();
+
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid goals response from server.");
+      }
+
+      setGoals(data.map(normalizeGoal));
+    } catch (error) {
+      setGoalError(
+        error.message || "Unable to load your goals."
+      );
+    } finally {
+      setGoalsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadDashboardGoals();
+  }, []);
+
+  // Reload goals when the browser tab regains focus.
+  useEffect(() => {
+    const handleFocus = () => {
+      loadDashboardGoals();
+    };
+
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
+  // Synchronize XP.
   useEffect(() => {
     const syncXP = () => setTotalXP(getTotalXP());
 
@@ -183,7 +274,7 @@ function Dashboard({ onLogout }) {
     };
   }, []);
 
-  // Level-up notification
+  // Level-up notification.
   useEffect(() => {
     if (level > previousLevel.current) {
       setShowLevelUp(true);
@@ -192,17 +283,15 @@ function Dashboard({ onLogout }) {
     previousLevel.current = level;
   }, [level]);
 
-  // Save missions
   useEffect(() => {
     localStorage.setItem(MISSIONS_KEY, JSON.stringify(missions));
   }, [missions]);
 
-  // Save challenges
   useEffect(() => {
     localStorage.setItem(CHALLENGES_KEY, JSON.stringify(challenges));
   }, [challenges]);
 
-  // Update streak when all daily missions are completed
+  // Streak for daily missions.
   useEffect(() => {
     if (!missions.length || completedMissions !== missions.length) {
       return;
@@ -231,11 +320,12 @@ function Dashboard({ onLogout }) {
     localStorage.setItem(LAST_COMPLETED_KEY, today);
   }, [completedMissions, missions.length, streak, bestStreak]);
 
-  // Complete or undo a mission
-  const handleMissionComplete = (id) => {
+  function handleMissionComplete(id) {
     const mission = missions.find((item) => item.id === id);
 
-    if (!mission) return;
+    if (!mission) {
+      return;
+    }
 
     const completing = !mission.completed;
 
@@ -253,20 +343,19 @@ function Dashboard({ onLogout }) {
       )
     );
 
-    setNotice(
+    showNotice(
       completing
         ? `+${mission.xp} XP earned! Keep going!`
         : `${mission.xp} XP removed. Mission reopened.`
     );
+  }
 
-    window.setTimeout(() => setNotice(""), 2500);
-  };
-
-  // Complete or undo a bonus challenge
-  const handleChallengeComplete = (id) => {
+  function handleChallengeComplete(id) {
     const challenge = challenges.find((item) => item.id === id);
 
-    if (!challenge) return;
+    if (!challenge) {
+      return;
+    }
 
     const completing = !challenge.completed;
 
@@ -284,20 +373,50 @@ function Dashboard({ onLogout }) {
       )
     );
 
-    setNotice(
+    showNotice(
       completing
         ? `Challenge completed! +${challenge.xp} XP`
         : "Challenge reopened."
     );
+  }
 
-    window.setTimeout(() => setNotice(""), 2500);
-  };
+  // Toggle a task belonging to a goal created on Goals page.
+  async function handleGoalTaskToggle(goalId, taskId) {
+    try {
+      const response = await toggleGoalTask(goalId, taskId);
 
-  // Reset missions on a new local calendar day
-  const resetMissions = () => {
+      if (!response?.goal) {
+        throw new Error("Invalid task update response.");
+      }
+
+      setGoals((current) =>
+        current.map((goal) =>
+          goal.id === goalId
+            ? normalizeGoal(response.goal)
+            : goal
+        )
+      );
+
+      if (response.xpAwarded && response.xpEarned > 0) {
+        const updatedXP = addXP(response.xpEarned);
+        setTotalXP(updatedXP);
+
+        showNotice(`Goal completed for today! +${response.xpEarned} XP`);
+      } else {
+        showNotice("Goal task updated.");
+      }
+    } catch (error) {
+      showNotice(error.message || "Could not update goal task.");
+    }
+  }
+
+  // Reset missions on a new local calendar day.
+  function resetMissions() {
     const lastReset = localStorage.getItem("nexora_missions_reset");
 
-    if (lastReset === getLocalDate()) return;
+    if (lastReset === getLocalDate()) {
+      return;
+    }
 
     setMissions((current) =>
       current.map((mission) => ({
@@ -314,26 +433,21 @@ function Dashboard({ onLogout }) {
     );
 
     localStorage.setItem("nexora_missions_reset", getLocalDate());
-  };
+  }
 
   useEffect(() => {
     resetMissions();
 
-    const interval = window.setInterval(
-      resetMissions,
-      60 * 1000
-    );
+    const interval = window.setInterval(resetMissions, 60 * 1000);
 
     return () => window.clearInterval(interval);
   }, []);
 
   return (
     <>
-      {/* Pass logout handler to Navbar */}
       <Navbar onLogout={onLogout} />
 
       <main className="nx-dashboard">
-        {/* Welcome banner */}
         <section className="nx-welcome">
           <div className="nx-welcome-content">
             <span className="nx-eyebrow">
@@ -363,7 +477,6 @@ function Dashboard({ onLogout }) {
           </div>
         </section>
 
-        {/* Level and XP */}
         <section className="nx-level-card">
           <div className="nx-level-top">
             <div className="nx-level-icon">⚡</div>
@@ -390,14 +503,7 @@ function Dashboard({ onLogout }) {
             </strong>
           </div>
 
-          <div
-            className="nx-progress-track nx-level-track"
-            role="progressbar"
-            aria-valuenow={xpInCurrentLevel}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Level progress"
-          >
+          <div className="nx-progress-track nx-level-track">
             <div
               className="nx-progress-fill nx-xp-fill"
               style={{ width: `${xpInCurrentLevel}%` }}
@@ -411,7 +517,6 @@ function Dashboard({ onLogout }) {
           </p>
         </section>
 
-        {/* Stats */}
         <section className="nx-stats-grid">
           <article className="nx-stat-card">
             <div className="nx-stat-icon purple">🎯</div>
@@ -459,21 +564,154 @@ function Dashboard({ onLogout }) {
           </article>
         </section>
 
+        {/* Goals created on the Goals page */}
+        <section className="nx-section nx-my-goals">
+          <div className="nx-section-heading">
+            <div>
+              <span className="nx-eyebrow">YOUR PERSONAL TARGETS</span>
+              <h2>My Goals</h2>
+              <p>Goals created on your Goals page appear here.</p>
+            </div>
+
+            <div className="nx-section-count">
+              {completedGoals}/{goals.length} COMPLETED
+            </div>
+          </div>
+
+          {goalsLoading && (
+            <div className="nx-goals-message">
+              Loading your goals...
+            </div>
+          )}
+
+          {!goalsLoading && goalError && (
+            <div className="nx-goals-message nx-goals-error">
+              <p>{goalError}</p>
+
+              <button
+                className="nx-goal-retry"
+                onClick={loadDashboardGoals}
+              >
+                Try again
+              </button>
+            </div>
+          )}
+
+          {!goalsLoading && !goalError && goals.length === 0 && (
+            <div className="nx-goals-message">
+              <span>🎯</span>
+              <h3>No goals yet</h3>
+              <p>Create your first goal on the Goals page to see it here.</p>
+            </div>
+          )}
+
+          {!goalsLoading && goals.length > 0 && (
+            <div className="nx-dashboard-goals-grid">
+              {goals.map((goal) => {
+                const progress = getGoalProgress(goal);
+                const completed = goal.completedDays >= goal.targetDays;
+                const todayTasks = getTodayTasks(goal);
+
+                return (
+                  <article className="nx-dashboard-goal-card" key={goal.id}>
+                    <div className="nx-dashboard-goal-top">
+                      <span className="nx-dashboard-goal-icon">
+                        {goal.icon || "🎯"}
+                      </span>
+
+                      <span
+                        className={
+                          completed
+                            ? "nx-dashboard-goal-status done"
+                            : "nx-dashboard-goal-status"
+                        }
+                      >
+                        {completed ? "Completed" : "In progress"}
+                      </span>
+                    </div>
+
+                    <h3>{goal.title}</h3>
+
+                    <p className="nx-dashboard-goal-description">
+                      {goal.description || "Keep making progress every day."}
+                    </p>
+
+                    <div className="nx-dashboard-goal-progress-heading">
+                      <span>Progress</span>
+                      <strong>{progress}%</strong>
+                    </div>
+
+                    <div className="nx-progress-track">
+                      <div
+                        className="nx-progress-fill"
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+
+                    <div className="nx-dashboard-goal-meta">
+                      <span>
+                        📅 {goal.completedDays}/{goal.targetDays} days
+                      </span>
+
+                      <span>⚡ {goal.xp} XP/day</span>
+                    </div>
+
+                    <div className="nx-dashboard-goal-tasks">
+                      <h4>Today's tasks</h4>
+
+                      {goal.tasks.map((task) => {
+                        const checked = todayTasks.includes(task.id);
+
+                        return (
+                          <label
+                            className={`nx-dashboard-task ${
+                              checked ? "checked" : ""
+                            }`}
+                            key={task.id}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={completed}
+                              onChange={() =>
+                                handleGoalTaskToggle(goal.id, task.id)
+                              }
+                            />
+
+                            <span>{task.title}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    {completed && (
+                      <div className="nx-dashboard-goal-finished">
+                        🏆 Goal accomplished!
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="nx-section nx-study-reminder-section">
+          <StudyReminder />
+        </section>
+
         {notice && (
           <div className="nx-toast" role="status">
             <span>✓</span> {notice}
           </div>
         )}
 
-        {/* Daily missions */}
         <section className="nx-section">
           <div className="nx-section-heading">
             <div>
               <span className="nx-eyebrow">BUILD YOUR HABITS</span>
               <h2>Today's Missions</h2>
-              <p>
-                Consistency beats intensity. Complete your daily goals.
-              </p>
+              <p>Consistency beats intensity. Complete your daily goals.</p>
             </div>
 
             <div className="nx-section-count">
@@ -529,19 +767,12 @@ function Dashboard({ onLogout }) {
           </div>
         </section>
 
-        {/* Bonus challenges */}
         <section className="nx-section nx-challenge-section">
           <div className="nx-section-heading">
             <div>
-              <span className="nx-eyebrow">
-                GO BEYOND THE ORDINARY
-              </span>
-
+              <span className="nx-eyebrow">GO BEYOND THE ORDINARY</span>
               <h2>Bonus Challenges</h2>
-
-              <p>
-                Take on bigger goals and earn extra experience.
-              </p>
+              <p>Take on bigger goals and earn extra experience.</p>
             </div>
 
             <div className="nx-challenge-symbol">✧</div>
@@ -567,14 +798,12 @@ function Dashboard({ onLogout }) {
           </div>
         </section>
 
-        {/* Daily motivation */}
         <section className="nx-quote-card">
           <span className="nx-quote-mark">“</span>
 
           <div>
             <span className="nx-eyebrow">YOUR DAILY REMINDER</span>
             <h3>Become 1% better every day.</h3>
-
             <p>
               You don't have to be perfect. You just have to keep showing up.
             </p>
@@ -588,7 +817,6 @@ function Dashboard({ onLogout }) {
           <p>Your journey. Your progress. Your next level.</p>
         </footer>
 
-        {/* Level-up modal */}
         {showLevelUp && (
           <div className="nx-modal-overlay">
             <section
@@ -599,17 +827,15 @@ function Dashboard({ onLogout }) {
             >
               <div className="nx-modal-symbol">⚡</div>
 
-              <span className="nx-eyebrow">
-                ACHIEVEMENT UNLOCKED
-              </span>
+              <span className="nx-eyebrow">ACHIEVEMENT UNLOCKED</span>
 
               <h2 id="nx-level-modal-title">LEVEL UP!</h2>
+
               <p className="nx-modal-level">LEVEL {level}</p>
+
               <h3>{rank}</h3>
 
-              <p>
-                Your hard work is paying off. Keep moving forward!
-              </p>
+              <p>Your hard work is paying off. Keep moving forward!</p>
 
               <button
                 type="button"

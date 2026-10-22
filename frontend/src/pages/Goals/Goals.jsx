@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import "./Goals.css";
 import Navbar from "../../components/Navbar";
-import { addXP } from "../../utils/xpSystem";
 
-const GOALS_KEY = "nexora_goals";
+import {
+  fetchGoals,
+  createGoal,
+  deleteGoal,
+  toggleGoalTask,
+} from "../../api/goalsApi";
 
 const EMOJIS = [
   "🎯", "📚", "💻", "🏋️", "🧘",
@@ -14,9 +18,10 @@ const EMOJIS = [
 const DEFAULT_GOAL = {
   title: "",
   description: "",
-  targetDays: 30,
+  targetDays: 15,
   xp: 10,
   icon: "🎯",
+  tasksText: "",
 };
 
 function getLocalDate(date = new Date()) {
@@ -27,59 +32,145 @@ function getLocalDate(date = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
-function readGoals() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(GOALS_KEY) || "[]");
+function getPreviousDate(dateString) {
+  const date = new Date(`${dateString}T12:00:00`);
+  date.setDate(date.getDate() - 1);
 
-    if (!Array.isArray(saved)) return [];
+  return getLocalDate(date);
+}
 
-    return saved.map((goal) => ({
-      ...goal,
-      targetDays: Math.max(1, Number(goal.targetDays) || 1),
-      completedDays: Math.max(0, Number(goal.completedDays) || 0),
-      xp: Math.max(1, Number(goal.xp) || 10),
-      completedDates: Array.isArray(goal.completedDates)
-        ? goal.completedDates
-        : [],
-    }));
-  } catch {
-    return [];
-  }
+function normalizeGoal(goal) {
+  return {
+    ...goal,
+    targetDays: Math.max(1, Number(goal.targetDays) || 1),
+    completedDays: Math.max(0, Number(goal.completedDays) || 0),
+    xp: Math.max(1, Number(goal.xp) || 10),
+
+    tasks: Array.isArray(goal.tasks)
+      ? goal.tasks.map((task, index) =>
+          typeof task === "string"
+            ? {
+                id: `${goal.id}-task-${index}`,
+                title: task,
+              }
+            : task
+        )
+      : [],
+
+    dailyCompletions:
+      goal.dailyCompletions &&
+      typeof goal.dailyCompletions === "object"
+        ? goal.dailyCompletions
+        : {},
+  };
 }
 
 function getProgress(goal) {
-  const target = Math.max(1, Number(goal.targetDays) || 1);
-  const completed = Math.min(
-    target,
-    Math.max(0, Number(goal.completedDays) || 0)
+  return Math.min(
+    100,
+    Math.round(
+      (goal.completedDays / Math.max(1, goal.targetDays)) * 100
+    )
   );
+}
 
-  return Math.round((completed / target) * 100);
+function getTodayTasks(goal) {
+  return goal.dailyCompletions?.[getLocalDate()] || [];
+}
+
+function isTodayComplete(goal) {
+  if (!goal.tasks?.length) {
+    return false;
+  }
+
+  const completedTasks = getTodayTasks(goal);
+
+  return goal.tasks.every((task) =>
+    completedTasks.includes(task.id)
+  );
+}
+
+function getGoalStreak(goal) {
+  if (!goal.tasks?.length) {
+    return 0;
+  }
+
+  let date = getLocalDate();
+  let streak = 0;
+
+  if (!isTodayComplete(goal)) {
+    date = getPreviousDate(date);
+  }
+
+  while (true) {
+    const completedTasks = goal.dailyCompletions?.[date] || [];
+
+    const complete = goal.tasks.every((task) =>
+      completedTasks.includes(task.id)
+    );
+
+    if (!complete) {
+      break;
+    }
+
+    streak++;
+    date = getPreviousDate(date);
+  }
+
+  return streak;
 }
 
 function Goals() {
-  const [goals, setGoals] = useState(readGoals);
+  const [goals, setGoals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
   const [notice, setNotice] = useState("");
+
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
 
-  const [newGoal, setNewGoal] = useState({ ...DEFAULT_GOAL });
+  const [newGoal, setNewGoal] = useState({
+    ...DEFAULT_GOAL,
+  });
+
+  function showNotice(message) {
+    setNotice(message);
+
+    window.setTimeout(() => {
+      setNotice((current) =>
+        current === message ? "" : current
+      );
+    }, 3000);
+  }
+
+  async function loadGoals() {
+    try {
+      setLoading(true);
+
+      const data = await fetchGoals();
+
+      if (!Array.isArray(data)) {
+        throw new Error("Invalid goals response from server.");
+      }
+
+      setGoals(data.map(normalizeGoal));
+    } catch (error) {
+      showNotice(error.message || "Could not load goals.");
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-    localStorage.setItem(GOALS_KEY, JSON.stringify(goals));
-  }, [goals]);
+    loadGoals();
+  }, []);
 
   const stats = useMemo(() => {
     const completed = goals.filter(
       (goal) => goal.completedDays >= goal.targetDays
     ).length;
-
-    const totalDays = goals.reduce(
-      (sum, goal) => sum + goal.completedDays,
-      0
-    );
 
     const totalXP = goals.reduce(
       (sum, goal) => sum + goal.completedDays * goal.xp,
@@ -97,7 +188,6 @@ function Goals() {
       total: goals.length,
       completed,
       active: goals.length - completed,
-      totalDays,
       totalXP,
       averageProgress,
     };
@@ -116,147 +206,152 @@ function Goals() {
 
       const matchesSearch =
         !query ||
-        goal.title.toLowerCase().includes(query) ||
-        goal.description.toLowerCase().includes(query);
+        goal.title?.toLowerCase().includes(query) ||
+        goal.description?.toLowerCase().includes(query);
 
       return matchesFilter && matchesSearch;
     });
   }, [goals, filter, search]);
 
-  const updateNewGoal = (field, value) => {
+  function updateNewGoal(field, value) {
     setNewGoal((current) => ({
       ...current,
       [field]: value,
     }));
-  };
+  }
 
-  const showNotice = (message) => {
-    setNotice(message);
-    window.setTimeout(() => setNotice(""), 2800);
-  };
-
-  const handleAddGoal = (event) => {
+  async function handleAddGoal(event) {
     event.preventDefault();
 
+    if (saving) {
+      return;
+    }
+
     const title = newGoal.title.trim();
+    const targetDays = Number(newGoal.targetDays);
+    const xp = Number(newGoal.xp);
 
     if (!title) {
       showNotice("Please enter a goal title.");
       return;
     }
 
-    const targetDays = Number(newGoal.targetDays);
-    const xp = Number(newGoal.xp);
-
     if (!Number.isInteger(targetDays) || targetDays < 1 || targetDays > 365) {
-      showNotice("Target days must be between 1 and 365.");
+      showNotice("Duration must be between 1 and 365 days.");
       return;
     }
 
     if (!Number.isInteger(xp) || xp < 1 || xp > 1000) {
-      showNotice("XP per day must be between 1 and 1000.");
+      showNotice("XP must be between 1 and 1000.");
       return;
     }
 
-    const goal = {
-      id: crypto.randomUUID
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random()}`,
+    const taskTitles = newGoal.tasksText
+      .split("\n")
+      .map((task) => task.trim())
+      .filter(Boolean);
+
+    if (!taskTitles.length) {
+      showNotice("Please enter at least one daily task.");
+      return;
+    }
+
+    if (taskTitles.length > 50) {
+      showNotice("You can add a maximum of 50 tasks.");
+      return;
+    }
+
+    const payload = {
       title,
-      description:
-        newGoal.description.trim() ||
-        "Make consistent progress towards your personal growth.",
+      description: newGoal.description.trim(),
       targetDays,
-      completedDays: 0,
       xp,
-      icon: newGoal.icon || "🎯",
-      completedDates: [],
-      createdAt: new Date().toISOString(),
+      icon: newGoal.icon,
+      tasks: taskTitles.map((title) => ({ title })),
     };
 
-    setGoals((current) => [goal, ...current]);
-    setNewGoal({ ...DEFAULT_GOAL });
-    setShowModal(false);
+    try {
+      setSaving(true);
 
-    showNotice("Your new goal has been created!");
-  };
+      const savedGoal = await createGoal(payload);
 
-  const handleCompleteDay = (goalId) => {
-    const goal = goals.find((item) => item.id === goalId);
+      if (!savedGoal?.id) {
+        throw new Error("Server did not return the saved goal.");
+      }
 
-    if (!goal) return;
+      setGoals((current) => [
+        normalizeGoal(savedGoal),
+        ...current,
+      ]);
 
-    const today = getLocalDate();
+      setNewGoal({ ...DEFAULT_GOAL });
+      setShowModal(false);
 
-    if (goal.completedDates.includes(today)) {
-      showNotice("You've already completed this goal today.");
+      showNotice("Goal created successfully!");
+    } catch (error) {
+      showNotice(error.message || "Failed to create goal.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleToggleTask(goalId, taskId) {
+    try {
+      const response = await toggleGoalTask(goalId, taskId);
+
+      if (!response?.goal) {
+        throw new Error("Invalid task update response.");
+      }
+
+      setGoals((current) =>
+        current.map((goal) =>
+          goal.id === goalId
+            ? normalizeGoal(response.goal)
+            : goal
+        )
+      );
+
+      if (response.xpAwarded) {
+        showNotice(`Amazing! You earned ${response.xpEarned} XP!`);
+      } else {
+        showNotice("Task updated successfully.");
+      }
+    } catch (error) {
+      showNotice(error.message || "Could not update task.");
+    }
+  }
+
+  async function handleDeleteGoal(goal) {
+    if (!window.confirm(`Delete "${goal.title}"?`)) {
       return;
     }
 
-    if (goal.completedDays >= goal.targetDays) {
-      showNotice("This goal is already completed!");
-      return;
+    try {
+      await deleteGoal(goal.id);
+
+      setGoals((current) =>
+        current.filter((item) => item.id !== goal.id)
+      );
+
+      showNotice("Goal deleted successfully.");
+    } catch (error) {
+      showNotice(error.message || "Could not delete goal.");
     }
+  }
 
-    // Award XP once when the user completes today's goal.
-    addXP(goal.xp);
-
-    setGoals((current) =>
-      current.map((item) => {
-        if (item.id !== goalId) return item;
-
-        const dates = Array.isArray(item.completedDates)
-          ? item.completedDates
-          : [];
-
-        // Prevent duplicate completion for the same day.
-        if (dates.includes(today)) return item;
-
-        return {
-          ...item,
-          completedDays: Math.min(
-            item.completedDays + 1,
-            item.targetDays
-          ),
-          completedDates: [...dates, today],
-        };
-      })
-    );
-
-    showNotice(`Great work! You earned +${goal.xp} XP.`);
-  };
-
-  const handleDeleteGoal = (goalId) => {
-    const goal = goals.find((item) => item.id === goalId);
-
-    if (!goal) return;
-
-    const confirmed = window.confirm(
-      `Delete "${goal.title}"? Your previously earned XP will remain.`
-    );
-
-    if (!confirmed) return;
-
-    setGoals((current) => current.filter((item) => item.id !== goalId));
-
-    showNotice("Goal deleted successfully.");
-  };
-
-  const closeModal = () => {
+  function closeModal() {
     setShowModal(false);
     setNewGoal({ ...DEFAULT_GOAL });
-  };
+  }
 
   return (
     <>
       <Navbar />
 
       <main className="ng-page">
-        {/* Hero */}
         <section className="ng-hero">
           <div className="ng-hero-content">
             <span className="ng-eyebrow">
-              <span className="ng-eyebrow-dot" />
               YOUR PERSONAL GROWTH JOURNEY
             </span>
 
@@ -267,37 +362,23 @@ function Goals() {
             </h1>
 
             <p>
-              Big achievements begin with small daily actions.
-              Build your habits, earn XP, and become your best self.
+              Build better habits, complete daily tasks, and
+              track your personal growth.
             </p>
 
             <button
-              type="button"
               className="ng-primary-button"
               onClick={() => setShowModal(true)}
             >
-              <span>＋</span> Create a goal
+              + Create a goal
             </button>
           </div>
 
-          <div className="ng-hero-visual" aria-hidden="true">
-            <div className="ng-orbit ng-orbit-one" />
-            <div className="ng-orbit ng-orbit-two" />
+          <div className="ng-hero-visual">
+            <div className="ng-hero-glow">🎯</div>
 
-            <div className="ng-hero-glow">
-              <span>🎯</span>
-            </div>
-
-            <div className="ng-float-card ng-float-top">
+            <div className="ng-float-card">
               <span>⚡</span>
-              <div>
-                <strong>Stay consistent</strong>
-                <small>One day at a time</small>
-              </div>
-            </div>
-
-            <div className="ng-float-card ng-float-bottom">
-              <span>✦</span>
               <div>
                 <strong>{stats.totalXP} XP</strong>
                 <small>Progress earned</small>
@@ -306,114 +387,64 @@ function Goals() {
           </div>
         </section>
 
-        {/* Statistics */}
         <section className="ng-stats">
           <article className="ng-stat-card">
-            <div className="ng-stat-icon ng-purple">🎯</div>
-            <span>Total goals</span>
+            <span>🎯 Total goals</span>
             <strong>{stats.total}</strong>
-            <small>Your ambitions, organized</small>
           </article>
 
           <article className="ng-stat-card">
-            <div className="ng-stat-icon ng-blue">🚀</div>
-            <span>Active goals</span>
+            <span>🚀 Active goals</span>
             <strong>{stats.active}</strong>
-            <small>Goals in progress</small>
           </article>
 
           <article className="ng-stat-card">
-            <div className="ng-stat-icon ng-green">🏆</div>
-            <span>Completed</span>
+            <span>🏆 Completed</span>
             <strong>{stats.completed}</strong>
-            <small>Milestones achieved</small>
           </article>
 
           <article className="ng-stat-card">
-            <div className="ng-stat-icon ng-orange">⚡</div>
-            <span>Days completed</span>
-            <strong>{stats.totalDays}</strong>
-            <small>Actions that add up</small>
+            <span>✨ Overall progress</span>
+            <strong>{stats.averageProgress}%</strong>
           </article>
         </section>
 
-        {/* Overall progress */}
-        {goals.length > 0 && (
-          <section className="ng-overview">
-            <div className="ng-overview-icon">✦</div>
-
-            <div className="ng-overview-content">
-              <div className="ng-overview-heading">
-                <div>
-                  <span className="ng-eyebrow">YOUR BIG PICTURE</span>
-                  <h2>Progress overview</h2>
-                </div>
-
-                <strong>{stats.averageProgress}%</strong>
-              </div>
-
-              <div
-                className="ng-progress-track ng-overall-track"
-                role="progressbar"
-                aria-label="Average goal progress"
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-valuenow={stats.averageProgress}
-              >
-                <div
-                  className="ng-progress-fill"
-                  style={{ width: `${stats.averageProgress}%` }}
-                />
-              </div>
-
-              <p>
-                {stats.averageProgress === 100
-                  ? "Amazing! All your goals are complete."
-                  : "Every completed day takes you one step closer to your goals."}
-              </p>
-            </div>
-          </section>
-        )}
-
-        {/* Goals section */}
         <section className="ng-goals-section">
           <div className="ng-section-heading">
             <div>
               <span className="ng-eyebrow">MAKE IT HAPPEN</span>
               <h2>My goals</h2>
-              <p>Small steps today. Big results tomorrow.</p>
+              <p>Your daily efforts build your future.</p>
             </div>
 
-            <span className="ng-goal-count">
-              {goals.length} {goals.length === 1 ? "GOAL" : "GOALS"}
-            </span>
+            <button
+              className="ng-primary-button"
+              onClick={() => setShowModal(true)}
+            >
+              + Add goal
+            </button>
           </div>
 
-          {goals.length > 0 && (
+          {!loading && goals.length > 0 && (
             <div className="ng-toolbar">
-              <label className="ng-search">
-                <span aria-hidden="true">⌕</span>
-                <input
-                  type="search"
-                  placeholder="Search your goals..."
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  aria-label="Search goals"
-                />
-              </label>
+              <input
+                className="ng-search"
+                type="search"
+                placeholder="Search goals..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
 
-              <div className="ng-filters" aria-label="Filter goals">
+              <div className="ng-filters">
                 {[
-                  ["all", "All goals"],
-                  ["active", "In progress"],
+                  ["all", "All"],
+                  ["active", "Active"],
                   ["completed", "Completed"],
                 ].map(([value, label]) => (
                   <button
                     key={value}
-                    type="button"
                     className={filter === value ? "active" : ""}
                     onClick={() => setFilter(value)}
-                    aria-pressed={filter === value}
                   >
                     {label}
                   </button>
@@ -422,41 +453,33 @@ function Goals() {
             </div>
           )}
 
-          {/* Empty state */}
-          {goals.length === 0 && (
+          {loading && (
             <div className="ng-empty">
-              <div className="ng-empty-art">
-                <span>🎯</span>
-                <i>✦</i>
-              </div>
+              <h3>Loading your goals...</h3>
+            </div>
+          )}
 
-              <span className="ng-eyebrow">A FRESH START</span>
-              <h3>Your next chapter starts here.</h3>
-
-              <p>
-                Create your first goal, build a daily routine,
-                and celebrate every little win.
-              </p>
+          {!loading && goals.length === 0 && (
+            <div className="ng-empty">
+              <span className="ng-empty-icon">🌱</span>
+              <h3>Your journey starts here!</h3>
+              <p>Create your first goal and start making progress.</p>
 
               <button
-                type="button"
                 className="ng-primary-button"
                 onClick={() => setShowModal(true)}
               >
-                ＋ Create your first goal
+                Create your first goal
               </button>
             </div>
           )}
 
-          {/* No filter results */}
-          {goals.length > 0 && filteredGoals.length === 0 && (
-            <div className="ng-no-results">
-              <span>🔎</span>
+          {!loading && goals.length > 0 && filteredGoals.length === 0 && (
+            <div className="ng-empty">
               <h3>No goals found</h3>
-              <p>Try another search or choose a different filter.</p>
 
               <button
-                type="button"
+                className="ng-secondary-button"
                 onClick={() => {
                   setSearch("");
                   setFilter("all");
@@ -467,68 +490,51 @@ function Goals() {
             </div>
           )}
 
-          {/* Goal cards */}
-          {filteredGoals.length > 0 && (
+          {!loading && filteredGoals.length > 0 && (
             <div className="ng-goals-grid">
               {filteredGoals.map((goal) => {
+                const completed = goal.completedDays >= goal.targetDays;
                 const progress = getProgress(goal);
-                const completed = progress === 100;
-                const completedToday = goal.completedDates.includes(
-                  getLocalDate()
-                );
+                const todayTasks = getTodayTasks(goal);
 
                 return (
-                  <article
-                    className={`ng-goal-card ${
-                      completed ? "ng-goal-finished" : ""
-                    }`}
-                    key={goal.id}
-                  >
+                  <article className="ng-goal-card" key={goal.id}>
                     <div className="ng-goal-card-top">
-                      <div className="ng-goal-icon">{goal.icon || "🎯"}</div>
+                      <span className="ng-goal-icon">
+                        {goal.icon || "🎯"}
+                      </span>
 
-                      <div className="ng-goal-top-right">
-                        {completed ? (
-                          <span className="ng-status ng-status-done">
-                            ✓ Completed
-                          </span>
-                        ) : (
-                          <span className="ng-status ng-status-active">
-                            ● In progress
-                          </span>
-                        )}
-
-                        <button
-                          type="button"
-                          className="ng-delete-button"
-                          onClick={() => handleDeleteGoal(goal.id)}
-                          aria-label={`Delete ${goal.title}`}
-                          title="Delete goal"
-                        >
-                          ×
-                        </button>
-                      </div>
+                      <button
+                        className="ng-delete-button"
+                        onClick={() => handleDeleteGoal(goal)}
+                        aria-label={`Delete ${goal.title}`}
+                      >
+                        ×
+                      </button>
                     </div>
 
                     <h3>{goal.title}</h3>
 
                     <p className="ng-goal-description">
-                      {goal.description}
+                      {goal.description || "Keep making progress every day."}
                     </p>
+
+                    <div className="ng-status-row">
+                      <span className={completed ? "ng-status ng-status-done" : "ng-status ng-status-active"}>
+                        {completed ? "✓ Completed" : "● In progress"}
+                      </span>
+
+                      <span className="ng-streak">
+                        🔥 {getGoalStreak(goal)} day streak
+                      </span>
+                    </div>
 
                     <div className="ng-goal-progress-heading">
                       <span>Overall progress</span>
                       <strong>{progress}%</strong>
                     </div>
 
-                    <div
-                      className="ng-progress-track"
-                      role="progressbar"
-                      aria-label={`${goal.title} progress`}
-                      aria-valuemin={0}
-                      aria-valuemax={100}
-                      aria-valuenow={progress}
-                    >
+                    <div className="ng-progress-track">
                       <div
                         className="ng-progress-fill"
                         style={{ width: `${progress}%` }}
@@ -539,45 +545,53 @@ function Goals() {
                       <div>
                         <span>COMPLETED DAYS</span>
                         <strong>
-                          {goal.completedDays}
-                          <small> / {goal.targetDays}</small>
+                          {goal.completedDays}/{goal.targetDays}
                         </strong>
                       </div>
 
                       <div>
                         <span>XP PER DAY</span>
-                        <strong className="ng-reward">
-                          ⚡ {goal.xp}
-                        </strong>
+                        <strong>⚡ {goal.xp}</strong>
                       </div>
                     </div>
 
-                    <div className="ng-goal-footer">
-                      {completed ? (
-                        <div className="ng-finished-banner">
-                          <span>🏆</span>
-                          <div>
-                            <strong>Goal accomplished!</strong>
-                            <small>You made it happen.</small>
-                          </div>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="ng-complete-button"
-                          onClick={() => handleCompleteDay(goal.id)}
-                          disabled={completedToday}
-                        >
-                          {completedToday
-                            ? "✓ Completed today"
-                            : "＋ Complete today's goal"}
-                        </button>
-                      )}
+                    <div className="ng-daily-tasks">
+                      <h4>Today's tasks</h4>
 
-                      <span className="ng-reward-pill">
-                        +{goal.xp} XP
-                      </span>
+                      {goal.tasks.map((task) => {
+                        const checked = todayTasks.includes(task.id);
+
+                        return (
+                          <label
+                            key={task.id}
+                            className={`ng-task ${checked ? "ng-task-completed" : ""}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={completed}
+                              onChange={() =>
+                                handleToggleTask(goal.id, task.id)
+                              }
+                            />
+
+                            <span>{task.title}</span>
+                          </label>
+                        );
+                      })}
+
+                      {isTodayComplete(goal) && (
+                        <p className="ng-success-message">
+                          🎉 All tasks completed today!
+                        </p>
+                      )}
                     </div>
+
+                    {completed && (
+                      <div className="ng-finished-banner">
+                        🏆 Goal accomplished!
+                      </div>
+                    )}
                   </article>
                 );
               })}
@@ -585,20 +599,12 @@ function Goals() {
           )}
         </section>
 
-        {/* Motivation card */}
         <section className="ng-motivation">
-          <div className="ng-motivation-symbol">✧</div>
-
+          <span>✦</span>
           <div>
-            <span className="ng-eyebrow">A LITTLE REMINDER</span>
             <h3>Progress, not perfection.</h3>
-            <p>
-              You don't need to do everything today.
-              Just do one thing that moves you forward.
-            </p>
+            <p>One small step every day makes a big difference.</p>
           </div>
-
-          <div className="ng-motivation-decoration">✦</div>
         </section>
 
         <footer className="ng-footer">
@@ -606,66 +612,50 @@ function Goals() {
           <p>Build better habits. Create your future.</p>
         </footer>
 
-        {/* Create goal modal */}
         {showModal && (
-          <div
-            className="ng-modal-overlay"
-            onMouseDown={(event) => {
-              if (event.target === event.currentTarget) closeModal();
-            }}
-          >
-            <section
-              className="ng-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="ng-modal-title"
-            >
+          <div className="ng-modal-overlay">
+            <section className="ng-modal" role="dialog" aria-modal="true">
               <div className="ng-modal-heading">
                 <div>
                   <span className="ng-eyebrow">START SOMETHING GREAT</span>
-                  <h2 id="ng-modal-title">Create a goal</h2>
-                  <p>Define your goal and make a plan to achieve it.</p>
+                  <h2>Create a goal</h2>
+                  <p>Define your goal and daily tasks.</p>
                 </div>
 
                 <button
-                  type="button"
                   className="ng-modal-close"
+                  type="button"
                   onClick={closeModal}
-                  aria-label="Close dialog"
                 >
                   ×
                 </button>
               </div>
 
               <form className="ng-goal-form" onSubmit={handleAddGoal}>
-                <label htmlFor="ng-goal-title">Goal title *</label>
+                <label htmlFor="ng-title">Goal title *</label>
 
                 <input
-                  id="ng-goal-title"
-                  type="text"
-                  placeholder="e.g. Master Java programming"
-                  maxLength={80}
+                  id="ng-title"
                   value={newGoal.title}
+                  maxLength={80}
                   onChange={(event) =>
                     updateNewGoal("title", event.target.value)
                   }
+                  placeholder="e.g. Master Java programming"
                   required
-                  autoFocus
                 />
 
-                <label htmlFor="ng-goal-description">
-                  Description
-                </label>
+                <label htmlFor="ng-description">Description</label>
 
                 <textarea
-                  id="ng-goal-description"
-                  placeholder="What do you want to accomplish?"
-                  maxLength={250}
-                  rows={3}
+                  id="ng-description"
                   value={newGoal.description}
+                  maxLength={250}
                   onChange={(event) =>
                     updateNewGoal("description", event.target.value)
                   }
+                  placeholder="What do you want to accomplish?"
+                  rows={3}
                 />
 
                 <label>Choose an icon</label>
@@ -675,12 +665,8 @@ function Goals() {
                     <button
                       key={emoji}
                       type="button"
-                      className={
-                        newGoal.icon === emoji ? "selected" : ""
-                      }
+                      className={newGoal.icon === emoji ? "selected" : ""}
                       onClick={() => updateNewGoal("icon", emoji)}
-                      aria-label={`Choose ${emoji} icon`}
-                      aria-pressed={newGoal.icon === emoji}
                     >
                       {emoji}
                     </button>
@@ -689,10 +675,10 @@ function Goals() {
 
                 <div className="ng-form-row">
                   <div>
-                    <label htmlFor="ng-target-days">Target days</label>
+                    <label htmlFor="ng-days">Duration (days) *</label>
 
                     <input
-                      id="ng-target-days"
+                      id="ng-days"
                       type="number"
                       min="1"
                       max="365"
@@ -702,12 +688,10 @@ function Goals() {
                       }
                       required
                     />
-
-                    <small>How many days to complete?</small>
                   </div>
 
                   <div>
-                    <label htmlFor="ng-xp">XP per day</label>
+                    <label htmlFor="ng-xp">XP per day *</label>
 
                     <input
                       id="ng-xp"
@@ -720,30 +704,49 @@ function Goals() {
                       }
                       required
                     />
-
-                    <small>Reward for daily progress</small>
                   </div>
                 </div>
+
+                <label htmlFor="ng-tasks">Daily tasks *</label>
+
+                <textarea
+                  id="ng-tasks"
+                  rows={5}
+                  value={newGoal.tasksText}
+                  onChange={(event) =>
+                    updateNewGoal("tasksText", event.target.value)
+                  }
+                  placeholder={"Enter one task per line:\nPractice Java arrays\nSolve 3 coding questions\nRevise OOP"}
+                  required
+                />
+
+                <small className="ng-field-hint">
+                  Enter one task per line. Tasks repeat every day.
+                </small>
 
                 <div className="ng-modal-preview">
                   <span>{newGoal.icon}</span>
                   <div>
                     <strong>{newGoal.title.trim() || "Your new goal"}</strong>
                     <small>
-                      {newGoal.targetDays || 0} days · {newGoal.xp || 0} XP
-                      per day
+                      {newGoal.targetDays} days · {newGoal.xp} XP per day
                     </small>
                   </div>
                 </div>
 
-                <button type="submit" className="ng-primary-button ng-submit">
-                  Create my goal <span>→</span>
+                <button
+                  type="submit"
+                  className="ng-primary-button ng-submit"
+                  disabled={saving}
+                >
+                  {saving ? "Creating..." : "Create my goal →"}
                 </button>
 
                 <button
                   type="button"
                   className="ng-cancel-button"
                   onClick={closeModal}
+                  disabled={saving}
                 >
                   Cancel
                 </button>
@@ -754,8 +757,7 @@ function Goals() {
 
         {notice && (
           <div className="ng-toast" role="status">
-            <span>✓</span>
-            {notice}
+            ✓ {notice}
           </div>
         )}
       </main>

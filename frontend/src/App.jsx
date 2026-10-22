@@ -54,14 +54,13 @@ function AppRoutes() {
   };
 
   // LOGOUT
-  const handleLogout = () => {
-    localStorage.removeItem(AUTH_KEY);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(PROFILE_KEY);
+const handleLogout = () => {
+  localStorage.removeItem("nexora_token");
+  localStorage.removeItem("nexora_logged_in");
 
-    setIsLoggedIn(false);
-    navigate("/login", { replace: true });
-  };
+  setIsLoggedIn(false);
+  navigate("/login", { replace: true });
+};
 
   const goToLogin = () => {
     navigate("/login");
